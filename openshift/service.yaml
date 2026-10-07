@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-access-admin
+spec:
+  selector:
+    app: mongo-access-admin
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

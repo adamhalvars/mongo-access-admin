@@ -1,0 +1,40 @@
+# Builds the image inside OpenShift from your Git repository.
+# Change the uri (and ref) below to your repository before applying.
+# Private repository: create a secret and uncomment sourceSecret (see README).
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: mongo-access-admin
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: https://git.example.com/team/mongo-access-admin.git   # <-- your repository
+      ref: main
+    # sourceSecret:
+    #   name: git-credentials
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: openshift/Containerfile
+      # buildArgs:
+      #   - name: NPM_REGISTRY
+      #     value: https://nexus.example.com/repository/npm/
+  output:
+    to:
+      kind: ImageStreamTag
+      name: mongo-access-admin:latest
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  triggers:
+    - type: ConfigChange
+    # Rebuild on every push: add a webhook (see README).
+    # - type: GitLab
+    #   gitlab:
+    #     secretReference:
+    #       name: mongo-access-admin-webhook

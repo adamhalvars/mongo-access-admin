@@ -1,0 +1,20 @@
+# HTTPS with the cluster's certificate. HTTP is redirected to HTTPS.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mongo-access-admin
+  annotations:
+    # Excel reports for many connections can take a while.
+    haproxy.router.openshift.io/timeout: 120s
+    # Optional: only allow these source addresses (space separated CIDRs).
+    # haproxy.router.openshift.io/ip_whitelist: 10.0.0.0/8 192.168.0.0/16
+spec:
+  # host: mongoadmin.apps.example.com   # leave out to get the cluster's default host name
+  to:
+    kind: Service
+    name: mongo-access-admin
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

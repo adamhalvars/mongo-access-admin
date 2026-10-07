@@ -1,0 +1,28 @@
+# Everything needed to run MongoDB Access Admin in an OpenShift project:
+#   oc project <your-project>
+#   oc apply -k openshift/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: mongo-access-admin
+      app.kubernetes.io/part-of: mongo-access-admin
+    includeSelectors: false
+
+resources:
+  - imagestream.yaml
+  - buildconfig.yaml   # builds the image from your Git repo; remove if your CI pushes the image
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - route.yaml
+  - networkpolicy.yaml
+
+# If your CI builds and pushes the image somewhere else, remove imagestream.yaml and
+# buildconfig.yaml above, remove the image.openshift.io/triggers annotation in deployment.yaml,
+# and set the image here:
+# images:
+#   - name: mongo-access-admin
+#     newName: registry.example.com/team/mongo-access-admin
+#     newTag: "1.0.0"

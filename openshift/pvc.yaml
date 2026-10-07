@@ -1,0 +1,12 @@
+# Connections (with MongoDB passwords), audit log and app accounts.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-access-admin-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  # storageClassName: <your storage class>   # leave out to use the cluster default

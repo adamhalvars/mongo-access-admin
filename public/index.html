@@ -1,0 +1,1939 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MongoDB Access Admin</title>
+<link rel="icon" id="favicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%2300684a'/%3E%3C/svg%3E">
+<script>
+  try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #667085; --line: #e3e6ea;
+    --accent: #00684a; --accent-soft: #e3f4ec; --danger: #c0362c; --danger-soft: #fdecea;
+    --chip: #eef1f4; --warn: #9a6700; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+    --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --on-accent: #fff;
+    --prod: #d92d20; --prod-soft: #fee4e2; --test: #b54708; --test-soft: #fef0c7;
+    --dev: #175cd3; --dev-soft: #d1e9ff; --other: #475467; --other-soft: #eaecf0;
+    --lv-owner: #e9d7fe; --lv-owner-t: #53389e; --lv-write: #d1fadf; --lv-write-t: #05603a;
+    --lv-read: #d1e9ff; --lv-read-t: #1849a9; --lv-other: #eaecf0; --lv-other-t: #344054;
+    color-scheme: light;
+  }
+  /* Dark theme: follows your computer's setting when "Auto" is chosen, otherwise your choice. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1215; --panel: #171b20; --text: #e6e9ed; --muted: #98a2b3; --line: #2a3038;
+      --accent: #3ecf8e; --accent-soft: #143328; --on-accent: #0b1a13; --danger: #ff6b5e; --danger-soft: #3a1a17;
+      --chip: #232a31; --warn: #e3b341; --shadow: none;
+      --prod: #ff7a6e; --prod-soft: #4a1d1a; --test: #f5b544; --test-soft: #3d2c0c;
+      --dev: #6cb2ff; --dev-soft: #122a47; --other: #b0b8c4; --other-soft: #2a3038;
+      --lv-owner: #3b2a5c; --lv-owner-t: #d6bbfb; --lv-write: #0f3b28; --lv-write-t: #75e0a7;
+      --lv-read: #13304f; --lv-read-t: #84caff; --lv-other: #2a3038; --lv-other-t: #cdd5df;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+      --bg: #0f1215; --panel: #171b20; --text: #e6e9ed; --muted: #98a2b3; --line: #2a3038;
+      --accent: #3ecf8e; --accent-soft: #143328; --on-accent: #0b1a13; --danger: #ff6b5e; --danger-soft: #3a1a17;
+      --chip: #232a31; --warn: #e3b341; --shadow: none;
+      --prod: #ff7a6e; --prod-soft: #4a1d1a; --test: #f5b544; --test-soft: #3d2c0c;
+      --dev: #6cb2ff; --dev-soft: #122a47; --other: #b0b8c4; --other-soft: #2a3038;
+      --lv-owner: #3b2a5c; --lv-owner-t: #d6bbfb; --lv-write: #0f3b28; --lv-write-t: #75e0a7;
+      --lv-read: #13304f; --lv-read-t: #84caff; --lv-other: #2a3038; --lv-other-t: #cdd5df;
+      color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; display: flex; align-items: center; gap: 10px; }
+  header h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  #conn { color: var(--muted); font-size: 13px; margin-left: auto; flex: 1 1 0; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conn-picker { display: flex; align-items: center; gap: 8px; }
+  .conn-picker select { min-width: 170px; font-weight: 600; }
+  .env-badge { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--other-soft); color: var(--other); white-space: nowrap; }
+  .env-badge.env-prod { background: var(--prod-soft); color: var(--prod); }
+  .env-badge.env-test { background: var(--test-soft); color: var(--test); }
+  .env-badge.env-dev { background: var(--dev-soft); color: var(--dev); }
+  .theme-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .theme-toggle button { border: 0; background: var(--panel); color: var(--muted); font: inherit; font-size: 13px; padding: 5px 10px; cursor: pointer; }
+  .theme-toggle button + button { border-left: 1px solid var(--line); }
+  .theme-toggle button.active { background: var(--chip); color: var(--text); font-weight: 600; }
+  /* ----- PROD: impossible to miss ----- */
+  #prodBanner {
+    position: sticky; top: 0; z-index: 60; color: #fff; text-align: center; padding: 10px 16px;
+    font-weight: 800; font-size: 15px; letter-spacing: .06em; text-transform: uppercase;
+    background: repeating-linear-gradient(-45deg, #b42318 0 22px, #8f1b12 22px 44px);
+    box-shadow: 0 2px 10px rgba(120, 20, 10, .35);
+  }
+  #prodBanner .pb-name { background: #fff; color: #b42318; border-radius: 6px; padding: 1px 8px; margin: 0 4px; }
+  #prodBanner .pb-sub { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; text-transform: none; opacity: .92; margin-top: 2px; }
+  body.is-prod { background: color-mix(in srgb, var(--bg) 90%, #d92d20); }
+  body.is-prod::after { content: ''; position: fixed; inset: 0; border: 6px solid #d92d20; pointer-events: none; z-index: 2000; }
+  body.is-prod header { background: #b42318; border-bottom-color: #8f1b12; }
+  body.is-prod header h1, body.is-prod #conn, body.is-prod #conn b { color: #fff; }
+  body.is-prod header h1 .dot { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, .25); }
+  body.is-prod #envBadge { background: #fff; color: #b42318; font-size: 13px; padding: 4px 12px; box-shadow: 0 0 0 2px rgba(255, 255, 255, .5); }
+  body.is-prod nav { border-bottom: 3px solid #d92d20; }
+  body.is-prod nav button.active { border-bottom-color: #d92d20; color: #d92d20; }
+  body.is-prod button.btn.primary { background: #d92d20; border-color: #d92d20; color: #fff; }
+  body.is-prod dialog { border: 3px solid #d92d20; }
+  body.is-prod dialog::backdrop { background: rgba(110, 10, 0, .5); }
+  body.is-prod .notice.prod { background: #d92d20; color: #fff; font-size: 14px; text-transform: uppercase; letter-spacing: .03em; }
+  .notice { border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; background: var(--chip); }
+  .notice.prod { background: var(--prod-soft); color: var(--prod); font-weight: 600; }
+  .conn-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .conn-item:last-child { border-bottom: 0; }
+  .conn-item .grow { flex: 1; min-width: 0; }
+  .conn-item .mono { overflow-wrap: anywhere; }
+  .test-result { font-size: 13px; margin-top: 6px; }
+  .test-result.ok { color: var(--accent); } .test-result.fail { color: var(--danger); font-weight: 400; }
+  /* ----- Matrix ----- */
+  .mx-summary { color: var(--muted); font-size: 13px; margin: -4px 0 10px; }
+  .mx-summary b { color: var(--text); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .legend .lv { display: inline-block; border-radius: 6px; padding: 2px 8px; font-weight: 600; font-size: 12px; }
+  .matrix-wrap { overflow: auto; max-height: calc(100vh - 290px); min-height: 200px; }
+  .matrix { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+  .matrix th, .matrix td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 0; }
+  .matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--panel); padding: 10px 12px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text); white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+  .matrix thead th.mx-cl { color: var(--muted); font-weight: 500; }
+  .matrix .mx-user { position: sticky; left: 0; z-index: 1; background: var(--panel); padding: 8px 14px; min-width: 190px; }
+  .matrix thead th.mx-user { z-index: 3; }
+  .matrix td.mx { min-width: 108px; height: 46px; padding: 4px; vertical-align: middle; }
+  .mx-btn { width: 100%; height: 100%; min-height: 38px; border: 0; border-radius: 6px; background: none; font: inherit; color: var(--muted); cursor: pointer; text-align: left; padding: 4px 8px; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
+  .mx-btn:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .mx-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .mx-btn .l { font-weight: 600; font-size: 13px; }
+  .mx-btn .t { font-size: 11px; opacity: .9; }
+  .mx-btn.mx-none { align-items: center; color: var(--muted); opacity: .35; }
+  .lv-owner { background: var(--lv-owner); color: var(--lv-owner-t); }
+  .lv-write { background: var(--lv-write); color: var(--lv-write-t); }
+  .lv-read { background: var(--lv-read); color: var(--lv-read-t); }
+  .lv-other { background: var(--lv-other); color: var(--lv-other-t); }
+  .mx-btn.partial { background-image: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, currentColor 14%, transparent) 7px 9px); }
+  .matrix tbody tr:hover .mx-user { background: var(--chip); }
+  .matrix tbody th { text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--text); }
+  .matrix td.mx-clu { vertical-align: middle; padding: 8px 12px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .src { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .src-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .src-head .grow { flex: 1; }
+  .src ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+  .src details { font-size: 12px; color: var(--muted); }
+  .src summary { cursor: pointer; }
+  .radio-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .radio-list label { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .radio-list label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  /* ----- Sign-in ----- */
+  #authScreen { position: fixed; inset: 0; z-index: 3000; background: var(--bg); display: grid; place-items: center; padding: 24px 16px; overflow: auto; }
+  .auth-card { width: min(420px, 100%); padding: 28px 28px 24px; }
+  .auth-card h1 { font-size: 20px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  .auth-card h1 .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .auth-card .desc { color: var(--muted); margin: 0 0 18px; }
+  .auth-card input { width: 100%; }
+  .auth-card .btn.primary { width: 100%; padding: 10px; margin-top: 4px; }
+  .auth-err { color: var(--danger); font-size: 13px; min-height: 18px; margin: 4px 0 8px; }
+  .user-btn { white-space: nowrap; }
+  .role-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .temp-pw { display: flex; gap: 8px; align-items: center; background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+  .temp-pw code { font-family: var(--mono); font-size: 14px; flex: 1; word-break: break-all; }
+  #appUsersBody select { padding: 4px 8px; }
+  /* What each app role may do (the server enforces the same rules) */
+  body.role-viewer #btnNewUser, body.role-viewer #btnNewRole, body.role-viewer [data-act],
+  body.role-viewer [data-revoke], body.role-viewer [data-rmmember], body.role-viewer [data-rminherit],
+  body.role-viewer [data-grant] { display: none !important; }
+  body:not(.role-admin) [data-addconn], body:not(.role-admin) [data-edit], body:not(.role-admin) [data-del],
+  body:not(.role-admin) [data-test], body:not(.role-admin) .admin-only { display: none !important; }
+  /* ----- Guide ----- */
+  .guide { padding: 28px 36px 36px; max-width: 920px; margin: 0 auto; line-height: 1.6; font-size: 15px; }
+  .guide h1 { font-size: 26px; margin: 0 0 8px; line-height: 1.25; }
+  .guide h2 { font-size: 20px; margin: 36px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+  .guide h3 { font-size: 16px; margin: 22px 0 6px; }
+  .guide p, .guide ul, .guide ol { margin: 0 0 12px; }
+  .guide li { margin-bottom: 4px; }
+  .guide code { font-family: var(--mono); font-size: 13px; background: var(--chip); border-radius: 5px; padding: 1px 5px; }
+  .guide a { color: var(--accent); }
+  .guide-lead { font-size: 16px; color: var(--muted); max-width: 70ch; }
+  .guide-toc { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 18px 0 8px; }
+  .guide-toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 28px; font-size: 14px; }
+  .guide-toc a { text-decoration: none; }
+  .guide-toc a:hover { text-decoration: underline; }
+  .guide-fig { margin: 8px 0 12px; overflow-x: auto; }
+  .guide-fig svg { display: block; min-width: 560px; }
+  .guide-table { overflow-x: auto; margin: 4px 0 16px; border: 1px solid var(--line); border-radius: 10px; }
+  .guide-table table { font-size: 14px; }
+  .guide-table th, .guide-table td { padding: 8px 12px; vertical-align: top; }
+  .guide-table th { text-transform: none; letter-spacing: 0; font-size: 13px; background: var(--bg); color: var(--text); }
+  @media (max-width: 720px) {
+    .guide { padding: 20px 16px; font-size: 14.5px; }
+    nav { overflow-x: auto; gap: 0; scrollbar-width: none; }
+    nav button { flex: none; padding: 12px 10px; }
+    .guide-toc ol { columns: 1; }
+    .guide-table thead { display: table-header-group; }
+    .guide-table tr { display: table-row; padding: 0; }
+    .guide-table th, .guide-table td { display: table-cell; }
+  }
+  .check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+  #conn b { color: var(--text); font-weight: 600; }
+  nav { display: flex; gap: 4px; padding: 0 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 12px 14px; font: inherit; color: var(--muted); cursor: pointer; }
+  nav button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  input, select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button.btn { font: inherit; border-radius: 8px; padding: 7px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; white-space: nowrap; }
+  button.btn:hover { border-color: var(--muted); }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  button.btn.danger { color: var(--danger); }
+  button.btn.danger.solid { background: var(--danger); border-color: var(--danger); color: #fff; }
+  button.btn.small { padding: 3px 9px; font-size: 13px; }
+  button.btn:disabled { opacity: .5; cursor: not-allowed; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  td.actions { text-align: right; white-space: nowrap; }
+  td.actions .btn { margin-left: 4px; }
+  .name { font-weight: 600; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--chip); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 13px; }
+  .chip.noclose { padding-right: 10px; }
+  .chip .db { color: var(--muted); }
+  .chip.admin { background: var(--accent-soft); }
+  .chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 20px; height: 20px; border-radius: 50%; }
+  .chip button:hover { background: var(--danger-soft); color: var(--danger); }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+  .roles-grid { display: grid; gap: 14px; }
+  .role-card { padding: 16px 18px; }
+  .role-card h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .role-card h3 .sub { font-weight: 400; }
+  .role-card .head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .role-card .head .spacer { flex: 1; }
+  .section { margin-top: 12px; }
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+  .privs td { padding: 6px 10px; font-size: 13px; }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+  .ok { color: var(--accent); font-weight: 600; }
+  .fail { color: var(--danger); font-weight: 600; }
+  dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; background: var(--panel); color: var(--text); width: min(620px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(10, 14, 18, .45); }
+  dialog form { padding: 20px 22px; }
+  dialog h2 { margin: 0 0 4px; font-size: 17px; }
+  dialog .desc { color: var(--muted); margin: 0 0 16px; }
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .field label { font-weight: 600; font-size: 13px; }
+  .field .hint { font-size: 12px; color: var(--muted); }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; min-width: 0; }
+  .grants { display: flex; flex-direction: column; gap: 8px; }
+  .grant-row { display: flex; gap: 8px; align-items: center; }
+  .grant-row select, .grant-row input { flex: 1; min-width: 0; }
+  .grant-row .x { flex: none; }
+  .priv-row { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .actions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 4px 12px; margin-top: 8px; }
+  .actions-grid label { font-weight: 400; font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  .actions-grid .grp { grid-column: 1 / -1; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-top: 6px; }
+  .dlg-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .pw-wrap { display: flex; gap: 6px; }
+  .pw-wrap input { flex: 1; font-family: var(--mono); }
+  .warnbox { background: var(--danger-soft); color: var(--danger); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
+  #toasts { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
+  .toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 8px; max-width: 420px; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+  .toast.err { background: var(--danger); color: #fff; }
+  @media (max-width: 720px) {
+    header, nav, main { padding-left: 16px; padding-right: 16px; }
+    #conn { margin-left: 0; width: 100%; order: 3; flex: none; text-align: left; white-space: normal; }
+    .conn-picker { width: 100%; }
+    .conn-picker select { flex: 1; min-width: 0; }
+    thead { display: none; }
+    tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
+    td { display: block; border: 0; padding: 4px 14px; }
+    td.actions { text-align: left; }
+    td.actions .btn { margin: 4px 4px 0 0; }
+    .row { flex-direction: column; }
+    /* The matrix stays a table that scrolls sideways */
+    .matrix thead { display: table-header-group; }
+    .matrix tr { display: table-row; padding: 0; }
+    .matrix th, .matrix td { display: table-cell; }
+    .matrix .mx-user { min-width: 130px; padding: 8px 10px; }
+    .matrix td.mx { min-width: 84px; }
+    .matrix-wrap { max-height: 70vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot"></span>MongoDB Access Admin</h1>
+  <div class="conn-picker">
+    <span class="env-badge" id="envBadge" hidden></span>
+    <select id="connSelect" aria-label="Connection"></select>
+    <button class="btn small" id="btnConnections">Connections</button>
+  </div>
+  <div id="conn"></div>
+  <div class="theme-toggle" role="group" aria-label="Theme">
+    <button data-theme-set="auto" title="Follow your computer's setting">Auto</button><button data-theme-set="light">Light</button><button data-theme-set="dark">Dark</button>
+  </div>
+  <button class="btn small user-btn" id="btnUser" hidden></button>
+</header>
+<div id="prodBanner" role="alert" hidden></div>
+<nav>
+  <button data-view="users" class="active">Users</button>
+  <button data-view="roles">Roles</button>
+  <button data-view="matrix">Matrix</button>
+  <button data-view="audit">Audit log</button>
+  <button data-view="guide">Guide</button>
+</nav>
+<main>
+  <section id="view-noconn" hidden>
+    <div class="card empty">
+      <h2 style="margin:0 0 6px;color:var(--text);font-size:18px">No connection yet</h2>
+      <p style="margin:0 0 16px">Add your first MongoDB server, for example test or prod.</p>
+      <button class="btn primary" data-addconn>+ Add connection</button>
+      <p style="margin:14px 0 0"><button type="button" class="btn" data-goto="guide">Read the guide on how access works</button></p>
+    </div>
+  </section>
+  <section id="view-users">
+    <div class="toolbar">
+      <input id="userSearch" type="search" placeholder="Search users or databases…" style="min-width:240px">
+      <select id="userDbFilter"><option value="">All auth databases</option></select>
+      <span class="spacer"></span>
+      <button class="btn" data-refresh>Refresh</button>
+      <button class="btn primary" id="btnNewUser">+ New user</button>
+    </div>
+    <div class="card"><table>
+      <thead><tr><th style="width:22%">User</th><th>Access (role · database)</th><th style="width:1%"></th></tr></thead>
+      <tbody id="usersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <section id="view-roles" hidden>
+    <div class="toolbar">
+      <input id="roleSearch" type="search" placeholder="Search roles…" style="min-width:240px">
+      <span class="spacer"></span>
+      <button class="btn" data-refresh>Refresh</button>
+      <button class="btn primary" id="btnNewRole">+ New role</button>
+    </div>
+    <p class="sub" style="margin:-4px 0 14px">Custom roles work as groups: give the role its privileges once, then add users as members.</p>
+    <div id="rolesList" class="roles-grid"><div class="card empty">Loading…</div></div>
+  </section>
+
+  <section id="view-matrix" hidden>
+    <div class="toolbar">
+      <input id="mxSearch" type="search" placeholder="Search users or roles…" style="min-width:220px">
+      <select id="mxFilter" aria-label="Show">
+        <option value="">All users</option>
+        <option value="write">Write access or more</option>
+        <option value="useradmin">Can grant access</option>
+        <option value="none">No access at all</option>
+      </select>
+      <select id="mxDb" aria-label="Database"><option value="">All databases</option></select>
+      <label class="check"><input type="checkbox" id="mxHideEmpty" checked> Hide empty databases</label>
+      <span class="spacer"></span>
+      <button class="btn" data-refresh>Refresh</button>
+      <button class="btn primary" id="btnExport">Export to Excel</button>
+    </div>
+    <div class="mx-summary" id="mxSummary"></div>
+    <div class="legend">
+      <span class="lv lv-owner">Owner</span>
+      <span class="lv lv-write">Write</span>
+      <span class="lv lv-read">Read</span>
+      <span class="lv lv-other">Other</span>
+      <span class="lv lv-write partial" style="background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,currentColor 14%,transparent) 7px 9px)">Striped = partial</span>
+      <span>+DB admin: can drop the database</span>
+      <span>+access: can create users and grant roles</span>
+      <span>Click a cell to see where the access comes from.</span>
+    </div>
+    <div class="card matrix-wrap" id="mxWrap"><div class="empty">Loading…</div></div>
+  </section>
+
+  <section id="view-audit" hidden>
+    <div class="toolbar">
+      <input id="auditSearch" type="search" placeholder="Filter log…" style="min-width:240px">
+      <label class="check"><input type="checkbox" id="auditOnlyThis" checked> This connection only</label>
+      <span class="spacer"></span>
+      <span class="sub" id="auditFile"></span>
+      <button class="btn" data-refresh>Refresh</button>
+    </div>
+    <div class="card"><table>
+      <thead><tr><th style="width:170px">Time</th><th>Connection</th><th>Event</th><th>Target</th><th>Details</th><th>Performed by</th></tr></thead>
+      <tbody id="auditBody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table></div>
+  </section>
+<!-- GUIDE START (generated from the guide text) -->
+  <section id="view-guide" hidden>
+    <article class="card guide">
+      <h1>How access works in MongoDB</h1>
+      <p class="guide-lead">In MongoDB a user gets access through roles, and each role is granted on a specific database. The user signs in against their auth database, but that does not decide what they may do. Only the roles do.</p>
+      <div class="guide-toc" role="navigation" aria-label="Contents"><div class="section-title">Contents</div><ol><li><a href="#g-overview">Overview</a></li><li><a href="#g-the-auth-database">The auth database</a></li><li><a href="#g-access-to-different-databases">Access to different databases</a></li><li><a href="#g-built-in-roles">Built-in roles</a></li><li><a href="#g-custom-roles-as-groups">Custom roles as groups</a></li><li><a href="#g-how-access-adds-up">How access adds up</a></li><li><a href="#g-pitfalls-and-good-habits">Pitfalls and good habits</a></li><li><a href="#g-how-to-do-it-in-access-admin">How to do it in Access Admin</a></li><li><a href="#g-troubleshooting">Troubleshooting</a></li><li><a href="#g-sources">Sources</a></li></ol></div>
+      <h2 id="g-overview">Overview</h2><figure class="guide-fig"><svg viewBox='0 0 760 396' role='img' aria-label='Sign-in happens in the auth database, access comes from the roles' font-size='13' style='width:100%;height:auto;max-width:760px'><defs><marker id='ov-arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='6' markerHeight='6' orient='auto-start-reverse'><path d='M0 0L10 5L0 10z' fill='var(--muted)'/></marker></defs><text x='24' y='32' font-size='15' font-weight='600' fill='var(--text)'>Sign-in happens in the auth database, access comes from the roles</text><text x='24' y='52' font-size='11.5' fill='var(--muted)'>Example: anna has three roles, and each role applies to one database</text><text x='24' y='76' font-size='11.5' font-weight='600' fill='var(--muted)'>User</text><text x='256' y='76' font-size='11.5' font-weight='600' fill='var(--muted)'>Roles (role @ database)</text><text x='552' y='76' font-size='11.5' font-weight='600' fill='var(--muted)'>Databases and result</text><g fill='none' stroke='var(--muted)' stroke-width='1.25'><path d='M200 180H228V110H254' marker-end='url(#ov-arrow)'/><path d='M200 180H254' marker-end='url(#ov-arrow)'/><path d='M228 180V250H254' marker-end='url(#ov-arrow)'/><path d='M476 110H550' marker-end='url(#ov-arrow)'/><path d='M476 180H550' marker-end='url(#ov-arrow)'/><path d='M476 250H550' marker-end='url(#ov-arrow)'/></g><g><rect x='24' y='144' width='176' height='72' rx='8' fill='var(--accent)' fill-opacity='0.12' stroke='var(--accent)' stroke-width='2'/><text x='40' y='168' font-weight='600' fill='var(--text)'>anna</text><text x='40' y='186' font-size='11.5' fill='var(--text)'>auth database: admin</text><text x='40' y='202' font-size='11.5' fill='var(--muted)'>only controls sign-in</text></g><g><rect x='256' y='84' width='220' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25'/><text x='272' y='106' font-weight='600' fill='var(--text)'>read @ shop</text><text x='272' y='124' font-size='11.5' fill='var(--muted)'>built-in role</text></g><g><rect x='256' y='154' width='220' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25'/><text x='272' y='176' font-weight='600' fill='var(--text)'>readWrite @ hr</text><text x='272' y='194' font-size='11.5' fill='var(--muted)'>built-in role</text></g><g><rect x='256' y='224' width='220' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25'/><text x='272' y='246' font-weight='600' fill='var(--text)'>analyst @ admin</text><text x='272' y='264' font-size='11.5' fill='var(--muted)'>custom: inventory.reports</text></g><g><rect x='552' y='84' width='184' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25'/><text x='568' y='106' font-weight='600' fill='var(--text)'>shop</text><text x='568' y='124' font-size='11.5' fill='var(--muted)'>Read</text></g><g><rect x='552' y='154' width='184' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25'/><text x='568' y='176' font-weight='600' fill='var(--text)'>hr</text><text x='568' y='194' font-size='11.5' fill='var(--muted)'>Write</text></g><g><rect x='552' y='224' width='184' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25'/><text x='568' y='246' font-weight='600' fill='var(--text)'>inventory</text><text x='568' y='264' font-size='11.5' fill='var(--muted)'>Read, reports only</text></g><g><rect x='552' y='294' width='184' height='52' rx='8' fill='none' stroke='var(--muted)' stroke-width='1.25' stroke-dasharray='4 4'/><text x='568' y='316' font-weight='600' fill='var(--muted)'>finance</text><text x='568' y='334' font-size='11.5' fill='var(--muted)'>No role, no access</text></g><text x='24' y='374' font-size='11.5' fill='var(--muted)'>The auth database gives no access by itself. A custom role in admin can give access in other databases.</text></svg></figure><p>The user signs in against their auth database and gets their access from the roles, each one on a specific database. Without a role on a database, like finance here, the user has no access to it.</p>
+<h2 id="g-the-auth-database">The auth database</h2>
+<p>The auth database is the database where the user was created and where they sign in. It does not decide which databases the user may use. Only the roles do that.</p>
+<ul>
+<li><strong>Name + auth database identify the user.</strong> <code>anna</code> in <code>admin</code> and <code>anna</code> in <code>shop</code> are two different users, each with their own password and roles.</li>
+<li><strong>When signing in, the auth database is given with <code>authSource</code></strong>, for example <code>mongodb://anna:password@server:27017/?authSource=admin</code>. Without <code>authSource</code> the database in the address path is used, and if there is none, <code>admin</code> is used.</li>
+<li><strong>All users are stored in the same place</strong>, in <code>admin.system.users</code>, whatever their auth database.</li>
+<li><strong>Access can be granted to any database</strong>, independent of the auth database. A user in <code>admin</code> may well only have access to <code>shop</code>.</li>
+</ul>
+<p><strong>Recommendation:</strong> create all users in <code>admin</code>. Then everyone signs in the same way, and nobody has to remember where they were created. In Access Admin the auth database is shown under the user's name, as "auth: admin".</p>
+<h2 id="g-access-to-different-databases">Access to different databases</h2>
+<p>Access is always granted as a pair: a role and the database the role applies to. The same role on two databases is two separate grants.</p>
+<div class="guide-table"><table>
+<thead>
+<tr>
+<th>User</th>
+<th>Role</th>
+<th>Database</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>anna</td>
+<td>read</td>
+<td>shop</td>
+<td>Can read everything in shop</td>
+</tr>
+<tr>
+<td>anna</td>
+<td>readWrite</td>
+<td>hr</td>
+<td>Can read and change everything in hr</td>
+</tr>
+<tr>
+<td>anna</td>
+<td>(none)</td>
+<td>finance</td>
+<td>No access to finance</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>One grant per database.</strong> If someone needs access to three databases they get three grants, or one custom role that covers all three (see Custom roles).</li>
+<li><strong>Roles ending in <code>AnyDatabase</code> apply to every database</strong> except <code>local</code> and <code>config</code>, including databases created later. They are always granted on <code>admin</code>.</li>
+<li><strong>Roles on <code>admin</code> are special.</strong> A role there can affect the whole server, so only grant roles on <code>admin</code> when it is really needed.</li>
+<li><strong>Access can be granted in advance.</strong> You can grant access to a database that does not exist yet. It applies once the database is created.</li>
+</ul>
+<h2 id="g-built-in-roles">Built-in roles</h2>
+<p>MongoDB ships with roles for the most common needs. The Matrix column shows how the role appears in Access Admin's matrix.</p>
+<div class="guide-table"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Granted on</th>
+<th>Gives</th>
+<th>Matrix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>read</td>
+<td>Any database</td>
+<td>Read all regular collections</td>
+<td>Read</td>
+</tr>
+<tr>
+<td>readWrite</td>
+<td>Any database</td>
+<td>Read and change data. Can also create and drop collections and indexes</td>
+<td>Write</td>
+</tr>
+<tr>
+<td>dbAdmin</td>
+<td>Any database</td>
+<td>Indexes, statistics and schema changes, and dropping the database. Cannot read data</td>
+<td>Other +DB admin</td>
+</tr>
+<tr>
+<td>userAdmin</td>
+<td>Any database</td>
+<td>Create users and roles in the database and grant any privilege, including to itself</td>
+<td>Other +access</td>
+</tr>
+<tr>
+<td>dbOwner</td>
+<td>Any database</td>
+<td>readWrite + dbAdmin + userAdmin</td>
+<td>Owner</td>
+</tr>
+<tr>
+<td>readAnyDatabase</td>
+<td>admin</td>
+<td>Like read, in every database except local and config</td>
+<td>Read in all</td>
+</tr>
+<tr>
+<td>readWriteAnyDatabase</td>
+<td>admin</td>
+<td>Like readWrite, in every database except local and config</td>
+<td>Write in all</td>
+</tr>
+<tr>
+<td>dbAdminAnyDatabase</td>
+<td>admin</td>
+<td>Like dbAdmin, in every database</td>
+<td>Other +DB admin</td>
+</tr>
+<tr>
+<td>userAdminAnyDatabase</td>
+<td>admin</td>
+<td>Like userAdmin, in every database. In practice a superuser</td>
+<td>+access in all</td>
+</tr>
+<tr>
+<td>clusterMonitor</td>
+<td>admin</td>
+<td>Read status and statistics for the server</td>
+<td>Cluster: Monitor</td>
+</tr>
+<tr>
+<td>clusterManager, hostManager</td>
+<td>admin</td>
+<td>Manage replication, sharding and server processes</td>
+<td>Cluster: Admin</td>
+</tr>
+<tr>
+<td>clusterAdmin</td>
+<td>admin</td>
+<td>clusterManager + clusterMonitor + hostManager, plus e.g. dropping databases</td>
+<td>Cluster: Admin</td>
+</tr>
+<tr>
+<td>backup, restore</td>
+<td>admin</td>
+<td>Back up and restore data</td>
+<td>Cluster</td>
+</tr>
+<tr>
+<td>root</td>
+<td>admin</td>
+<td>Everything: readWriteAnyDatabase, dbAdminAnyDatabase, userAdminAnyDatabase, clusterAdmin, backup and restore</td>
+<td>Owner in all, Cluster: Full</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="g-custom-roles-as-groups">Custom roles as groups</h2>
+<p>A custom role bundles privileges under one name, so you can give the same access to many users at once. Change the role and the access changes for everyone who has it.</p>
+<p>A custom role has two parts:</p>
+<ul>
+<li><strong>Privileges:</strong> a resource (a database, a collection or the whole server) and the actions allowed on it, for example <code>find</code> and <code>insert</code> on <code>shop.orders</code>.</li>
+<li><strong>Inherited roles:</strong> other roles, built-in or custom, whose privileges the role takes on.</li>
+</ul>
+<p>Where the role is created decides what it may contain:</p>
+<div class="guide-table"><table>
+<thead>
+<tr>
+<th>Created in</th>
+<th>May contain privileges in</th>
+<th>May inherit roles from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>admin</td>
+<td>Every database and the whole server</td>
+<td>Every database</td>
+</tr>
+<tr>
+<td>Another database, e.g. shop</td>
+<td>Only shop</td>
+<td>Only shop</td>
+</tr>
+</tbody>
+</table></div>
+<p>A role is identified, just like a user, by name + database: <code>analyst@admin</code> and <code>analyst@shop</code> are two different roles. <strong>Recommendation:</strong> create custom roles in <code>admin</code>, so they can span several databases.</p>
+<p><strong>Example:</strong> the role <code>analyst@admin</code> has <code>find</code> on <code>shop.orders</code> and inherits <code>read</code> on <code>hr</code>. Anyone with the role can read everything in hr but only the orders collection in shop. In the matrix this shows as Read in hr and a striped cell, Read (partial), in shop.</p>
+<h2 id="g-how-access-adds-up">How access adds up</h2>
+<p>A user's access is the sum of all their roles. One role can never take away access that another role gives, because MongoDB has no rule for denying.</p>
+<ul>
+<li><strong>More access always wins.</strong> If anna has both <code>readWrite</code> and <code>read</code> on shop she can write. Adding <code>read</code> restricts nothing.</li>
+<li><strong>To reduce access, remove the role that gives it.</strong> Click the cell in the matrix to see which roles those are.</li>
+<li><strong>Inherited roles count at every level.</strong> If a role inherits another that in turn inherits a third, the user gets the privileges of all three.</li>
+<li><strong>Privileges can apply to a whole database or to individual collections.</strong> If they only apply to some collections, the cell in the matrix is striped and marked "partial".</li>
+<li><strong>Changes take effect immediately.</strong> MongoDB checks privileges on every operation, so a removed role stops working even for someone who is already signed in.</li>
+</ul>
+<h2 id="g-pitfalls-and-good-habits">Pitfalls and good habits</h2>
+<p>Several roles give full power in practice, because whoever has them can grant more access to themselves.</p>
+<div class="guide-table"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Why it is dangerous</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>userAdmin or dbOwner on a database</td>
+<td>Can grant itself any privilege in that database</td>
+</tr>
+<tr>
+<td>userAdmin or dbOwner on admin</td>
+<td>Can grant itself everything on the whole server</td>
+</tr>
+<tr>
+<td>userAdminAnyDatabase</td>
+<td>Can grant itself everything. MongoDB calls it effectively a superuser</td>
+</tr>
+<tr>
+<td>root</td>
+<td>Has everything from the start</td>
+</tr>
+</tbody>
+</table></div>
+<p>Treat these roles like root and give them to as few people as possible. In the matrix and the report they show as Owner or with the +access marker. The account Access Admin itself uses needs <code>userAdminAnyDatabase</code>, so protect <code>connections.json</code> accordingly.</p>
+<p>Good habits:</p>
+<ol>
+<li><strong>Grant the least access possible.</strong> Read access is enough more often than you might think.</li>
+<li><strong>One account per application and environment</strong>, with only the role the app needs, usually <code>readWrite</code> on its own database. Never give <code>root</code> to an application.</li>
+<li><strong>Personal accounts for people</strong>, no shared accounts. Then the audit log shows who did what.</li>
+<li><strong>Use custom roles as groups</strong>, for example <code>developer</code> and <code>analyst</code>, instead of granting many roles one by one.</li>
+<li><strong>Remember that <code>readWrite</code> can also drop collections.</strong> If someone should only add data, a custom role with <code>find</code> and <code>insert</code> is safer.</li>
+<li><strong>Do an access review regularly.</strong> Export the Excel report and have the owners confirm that the access is right.</li>
+<li><strong>Check that authentication is enabled</strong> on the server (<code>security.authorization: enabled</code>). Otherwise anyone can do anything, and Access Admin shows a warning in the header.</li>
+<li><strong>MongoDB Atlas is not managed here.</strong> Atlas does not allow user and role commands over the database connection. There, users are managed in the Atlas web UI, API or CLI.</li>
+</ol>
+<h2 id="g-how-to-do-it-in-access-admin">How to do it in Access Admin</h2>
+<p>Choose the right connection in the menu at the top before you start. Prod is marked in red.</p>
+<h3 id="g-a-new-colleague-who-needs-to-read-a-database">A new colleague who needs to read a database</h3>
+<ol>
+<li>Users → New user. Enter the name, leave the auth database as <code>admin</code>, click Generate and then Copy for the password.</li>
+<li>Under Access choose <code>read</code> and the database. Click Create user.</li>
+<li>Send the password securely and ask the person to change it.</li>
+</ol>
+<h3 id="g-a-new-account-for-an-application">A new account for an application</h3>
+<ol>
+<li>New user with a name that shows app and environment, for example <code>orderapp-prod</code>.</li>
+<li>Access: <code>readWrite</code> on the app's database, nothing else.</li>
+<li>Give the connection string with <code>authSource=admin</code> to the people who run the app.</li>
+</ol>
+<h3 id="g-the-same-access-for-several-people">The same access for several people</h3>
+<ol>
+<li>Roles → New role. Create it in <code>admin</code> and give it privileges (the Read only and Read + write buttons help) or let it inherit built-in roles.</li>
+<li>Add the people under Members on the role.</li>
+</ol>
+<h3 id="g-remove-access">Remove access</h3>
+<ul>
+<li><strong>A role from one person:</strong> click × on the role in the Users tab, or click the cell in the Matrix and choose Remove the role. You are asked whether you are sure.</li>
+<li><strong>Someone who leaves:</strong> Users → Delete and type the name to confirm. All access disappears immediately.</li>
+</ul>
+<h3 id="g-find-out-who-has-access-to-something">Find out who has access to something</h3>
+<ol>
+<li>Open Matrix and choose the database in the filter, or choose Write access or more.</li>
+<li>Click a cell to see exactly which role gives the access.</li>
+</ol>
+<h3 id="g-access-review">Access review</h3>
+<ol>
+<li>Matrix → Export to Excel → All connections.</li>
+<li>The Overview sheet gives the key figures per connection. The Details sheet can be filtered by user or database.</li>
+</ol>
+<h2 id="g-troubleshooting">Troubleshooting</h2>
+<div class="guide-table"><table>
+<thead>
+<tr>
+<th>Message or problem</th>
+<th>Common cause</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Authentication failed</td>
+<td>Wrong password, or wrong auth database in <code>authSource</code></td>
+<td>Check that <code>authSource</code> is the database where the user was created. In the app it is shown as "auth:" under the name</td>
+</tr>
+<tr>
+<td>not authorized on shop to execute command</td>
+<td>The user lacks a role that allows that action in shop</td>
+<td>Click the cell for shop in the Matrix to see what is missing. Grant e.g. <code>read</code> or <code>readWrite</code></td>
+</tr>
+<tr>
+<td>The user cannot see the database in their tool</td>
+<td>They have no role in that database</td>
+<td>Grant a role on the database. Tools like Compass only show databases the user has access to</td>
+</tr>
+<tr>
+<td>User "x@admin" already exists</td>
+<td>The user already exists in that auth database</td>
+<td>Grant the existing user more access instead of creating a new one</td>
+</tr>
+<tr>
+<td>Could not find user</td>
+<td>Wrong auth database given</td>
+<td>Check the auth database under the name in the Users tab</td>
+</tr>
+<tr>
+<td>Could not connect (in Access Admin)</td>
+<td>The server cannot be reached, or the password in the connection is wrong</td>
+<td>Connections → Edit → Test connection</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="g-sources">Sources</h2>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.mongodb.com/docs/manual/reference/built-in-roles/">Built-in roles</a>, MongoDB Manual</li>
+<li><a target="_blank" rel="noopener" href="https://www.mongodb.com/docs/manual/core/security-users/">Users and authentication database</a>, MongoDB Manual</li>
+<li><a target="_blank" rel="noopener" href="https://www.mongodb.com/docs/manual/core/security-user-defined-roles/">User-defined roles</a>, MongoDB Manual</li>
+<li><a target="_blank" rel="noopener" href="https://www.mongodb.com/docs/manual/core/authorization/">Role-based access control</a>, MongoDB Manual</li>
+<li><a target="_blank" rel="noopener" href="https://www.mongodb.com/docs/manual/reference/connection-string-options/">Connection string options: authSource</a>, MongoDB Manual</li>
+<li><a target="_blank" rel="noopener" href="https://www.mongodb.com/docs/atlas/unsupported-commands/">Unsupported commands in Atlas</a>, MongoDB Atlas</li>
+</ul>
+    </article>
+  </section>
+  <!-- GUIDE END -->
+</main>
+
+<!-- New user -->
+<dialog id="dlgNewUser"><form method="dialog">
+  <h2>New user</h2>
+  <p class="desc">Creates a user and grants access right away.</p>
+  <div class="row">
+    <div class="field"><label>Username</label><input name="user" required autocomplete="off"></div>
+    <div class="field"><label>Auth database</label><input name="db" value="admin" list="dbList" required>
+      <span class="hint">Where the user signs in. "admin" is the most common.</span></div>
+  </div>
+  <div class="field"><label>Password</label>
+    <div class="pw-wrap"><input name="password" type="text" required minlength="8" autocomplete="new-password">
+    <button type="button" class="btn" data-gen>Generate</button><button type="button" class="btn" data-copy>Copy</button></div>
+  </div>
+  <div class="field"><label>Access</label>
+    <div class="grants" data-grants></div>
+    <div><button type="button" class="btn small" data-addgrant>+ Add access</button></div>
+  </div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Create user</button></div>
+</form></dialog>
+
+<!-- Grant access -->
+<dialog id="dlgGrant"><form method="dialog">
+  <h2>Grant access</h2>
+  <p class="desc" data-desc></p>
+  <div class="grants" data-grants></div>
+  <div style="margin:8px 0 14px"><button type="button" class="btn small" data-addgrant>+ Another one</button></div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Grant access</button></div>
+</form></dialog>
+
+<!-- Change password -->
+<dialog id="dlgPassword"><form method="dialog">
+  <h2>Change password</h2>
+  <p class="desc" data-desc></p>
+  <div class="field"><label>New password</label>
+    <div class="pw-wrap"><input name="password" type="text" required minlength="8" autocomplete="new-password">
+    <button type="button" class="btn" data-gen>Generate</button><button type="button" class="btn" data-copy>Copy</button></div>
+  </div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Save</button></div>
+</form></dialog>
+
+<!-- Confirm deletion -->
+<dialog id="dlgConfirm"><form method="dialog">
+  <h2 data-title></h2>
+  <div class="warnbox" data-desc></div>
+  <div class="field"><label data-label></label><input name="confirm" autocomplete="off"></div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn danger solid" value="ok" data-okbtn disabled>Delete</button></div>
+</form></dialog>
+
+<!-- New role / edit privileges -->
+<dialog id="dlgRole"><form method="dialog">
+  <h2 data-title>New role</h2>
+  <p class="desc" data-desc>A role bundles privileges. Then add users as members.</p>
+  <div class="row" data-namerow>
+    <div class="field"><label>Role name</label><input name="role" autocomplete="off" placeholder="e.g. analyst"></div>
+    <div class="field"><label>Created in database</label><input name="db" list="dbList" value="admin">
+      <span class="hint">Roles in "admin" can span several databases.</span></div>
+  </div>
+  <div class="field"><label>Privileges</label>
+    <div class="grants" data-privs></div>
+    <div><button type="button" class="btn small" data-addpriv>+ Add privilege</button></div>
+  </div>
+  <div class="field" data-inheritfield><label>Inherits roles <span class="sub">(optional)</span></label>
+    <div class="grants" data-grants></div>
+    <div><button type="button" class="btn small" data-addgrant>+ Inherit role</button></div>
+  </div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" data-okbtn>Create role</button></div>
+</form></dialog>
+
+<!-- Add member -->
+<dialog id="dlgMember"><form method="dialog">
+  <h2>Add member</h2>
+  <p class="desc" data-desc></p>
+  <div class="field"><label>User</label><select name="user" required></select></div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Add</button></div>
+</form></dialog>
+
+<!-- Yes/no confirmation -->
+<dialog id="dlgAsk"><form method="dialog">
+  <h2 data-title></h2>
+  <p class="desc" data-desc style="color:var(--text)"></p>
+  <div class="notice" data-extra hidden></div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn danger solid" value="ok" data-okbtn>Delete</button></div>
+</form></dialog>
+
+<!-- List of connections -->
+<dialog id="dlgConnections" data-noprod><form method="dialog">
+  <h2>Connections</h2>
+  <p class="desc">Servers you can switch between. Passwords are stored only in <span class="mono">connections.json</span> on your computer and are never sent to the browser.</p>
+  <div data-list></div>
+  <div class="dlg-footer" style="justify-content:space-between">
+    <button type="button" class="btn" data-addconn>+ New connection</button>
+    <button class="btn primary" value="cancel" formnovalidate>Close</button>
+  </div>
+</form></dialog>
+
+<!-- New/edit connection -->
+<dialog id="dlgConnEdit" data-noprod><form method="dialog">
+  <h2 data-title>New connection</h2>
+  <div class="row">
+    <div class="field"><label>Name</label><input name="name" required autocomplete="off" placeholder="e.g. Prod Stockholm"></div>
+    <div class="field"><label>Environment</label>
+      <select name="env">
+        <option value="prod">Prod</option><option value="test">Test</option><option value="dev">Dev</option><option value="other" selected>Other</option>
+      </select>
+      <span class="hint">Prod is marked in red throughout the app.</span></div>
+  </div>
+  <div class="field"><label>Connection string</label>
+    <input name="uri" autocomplete="off" spellcheck="false" class="mono" placeholder="mongodb://admin:password@server:27017/?authSource=admin">
+    <span class="hint" data-urihint>The account needs the userAdminAnyDatabase or root role. Special characters in the password must be URL-encoded (@ becomes %40).</span>
+    <div><button type="button" class="btn small" data-test>Test connection</button></div>
+    <div class="test-result" data-result></div>
+  </div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" data-okbtn>Save</button></div>
+</form></dialog>
+
+<!-- Matrix: details for a cell -->
+<dialog id="dlgCell"><form method="dialog">
+  <h2 data-title></h2>
+  <p class="desc" data-desc></p>
+  <div data-sources></div>
+  <div class="dlg-footer" style="justify-content:space-between">
+    <button type="button" class="btn" data-grant>+ Grant more access</button>
+    <button class="btn primary" value="cancel" formnovalidate>Close</button>
+  </div>
+</form></dialog>
+
+<!-- Export -->
+<dialog id="dlgExport" data-noprod><form method="dialog">
+  <h2>Export to Excel</h2>
+  <p class="desc">The report shows who has access to what. It contains an overview, a matrix per connection and a details sheet you can filter. The export is recorded in the audit log.</p>
+  <div class="radio-list">
+    <label><input type="radio" name="scope" value="current" checked> <span><b data-current></b><br><span class="sub">Only the selected connection</span></span></label>
+    <label><input type="radio" name="scope" value="all"> <span><b>All connections</b><br><span class="sub" data-allcount></span></span></label>
+  </div>
+  <div class="dlg-footer"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" data-okbtn>Download</button></div>
+</form></dialog>
+
+<datalist id="dbList"></datalist>
+<!-- Sign-in screen -->
+<div id="authScreen" hidden>
+  <div class="card auth-card">
+    <h1><span class="dot"></span>MongoDB Access Admin</h1>
+
+    <form id="loginForm" hidden autocomplete="on">
+      <p class="desc">Sign in to continue.</p>
+      <div class="field"><label for="liUser">Username</label><input id="liUser" name="username" autocomplete="username" required></div>
+      <div class="field"><label for="liPass">Password</label><input id="liPass" name="password" type="password" autocomplete="current-password" required></div>
+      <div class="auth-err" data-err></div>
+      <button class="btn primary" type="submit">Sign in</button>
+    </form>
+
+    <form id="setupForm" hidden autocomplete="off">
+      <p class="desc">Welcome! Create the first admin account. The one-time setup code is printed in the server log when the app starts (for Docker: <span class="mono">docker compose logs</span>; for the service: <span class="mono">journalctl -u mongo-access-admin</span>).</p>
+      <div class="field"><label for="suCode">Setup code</label><input id="suCode" name="code" placeholder="XXXXX-XXXXX" required class="mono"></div>
+      <div class="field"><label for="suUser">Your username</label><input id="suUser" name="username" autocomplete="username" required></div>
+      <div class="field"><label for="suPass">Password</label><input id="suPass" name="password" type="password" autocomplete="new-password" required minlength="12">
+        <span class="hint">At least 12 characters, and not containing your username.</span></div>
+      <div class="field"><label for="suPass2">Repeat password</label><input id="suPass2" name="password2" type="password" autocomplete="new-password" required></div>
+      <div class="auth-err" data-err></div>
+      <button class="btn primary" type="submit">Create admin and sign in</button>
+    </form>
+
+    <form id="forceForm" hidden autocomplete="off">
+      <p class="desc">You signed in with a temporary password. Choose your own password to continue.</p>
+      <div class="field"><label for="fcCur">Temporary password</label><input id="fcCur" name="current" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="fcNew">New password</label><input id="fcNew" name="password" type="password" autocomplete="new-password" required minlength="12">
+        <span class="hint">At least 12 characters, and not containing your username.</span></div>
+      <div class="field"><label for="fcNew2">Repeat new password</label><input id="fcNew2" name="password2" type="password" autocomplete="new-password" required></div>
+      <div class="auth-err" data-err></div>
+      <button class="btn primary" type="submit">Save password</button>
+      <p style="margin:12px 0 0;text-align:center"><a href="#" data-logout class="sub">Sign out</a></p>
+    </form>
+  </div>
+</div>
+
+<!-- Own account -->
+<dialog id="dlgAccount" data-noprod><form method="dialog">
+  <h2 data-title>Your account</h2>
+  <p class="desc" data-desc></p>
+  <div class="admin-only" style="margin-bottom:14px"><button type="button" class="btn" id="btnAppUsers">Manage app accounts</button></div>
+  <div class="section-title">Change password</div>
+  <div class="field"><label>Current password</label><input name="current" type="password" autocomplete="current-password"></div>
+  <div class="row">
+    <div class="field"><label>New password</label><input name="password" type="password" autocomplete="new-password"></div>
+    <div class="field"><label>Repeat</label><input name="password2" type="password" autocomplete="new-password"></div>
+  </div>
+  <div class="dlg-footer" style="justify-content:space-between">
+    <button type="button" class="btn danger" data-logout>Sign out</button>
+    <span><button class="btn" value="cancel" formnovalidate>Close</button> <button class="btn primary" value="ok">Change password</button></span>
+  </div>
+</form></dialog>
+
+<!-- App accounts (admin) -->
+<dialog id="dlgAppUsers" data-noprod style="width:min(760px, calc(100vw - 32px))"><form method="dialog">
+  <h2>App accounts</h2>
+  <p class="desc">Who may sign in to this app. <b>Admin</b>: everything, including connections and app accounts. <b>Operator</b>: manage MongoDB users, roles and access. <b>Viewer</b>: read only.</p>
+  <div class="card" style="box-shadow:none"><table>
+    <thead><tr><th>Username</th><th>Role</th><th>Last sign-in</th><th></th></tr></thead>
+    <tbody id="appUsersBody"></tbody>
+  </table></div>
+  <div data-temp></div>
+  <div class="section-title" style="margin-top:16px">New app account</div>
+  <div class="grant-row">
+    <input name="newUser" placeholder="username" autocomplete="off">
+    <select name="newRole"><option value="viewer">Viewer</option><option value="operator" selected>Operator</option><option value="admin">Admin</option></select>
+    <button type="button" class="btn" data-add>Create</button>
+  </div>
+  <p class="sub">New accounts get a temporary password that must be changed at the first sign-in.</p>
+  <div class="dlg-footer"><button class="btn primary" value="cancel" formnovalidate>Close</button></div>
+</form></dialog>
+
+<div id="toasts"></div>
+
+<script>
+const state = { users: [], roles: [], databases: [], catalog: null, audit: [], me: '', connections: [], connId: null, gen: 0, matrix: null };
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const enc = encodeURIComponent;
+
+async function api(path, opts = {}) {
+  const res = await fetch('/api' + path, {
+    method: opts.method || 'GET',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'mongo-admin', 'X-Connection': state.connId || '' },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !opts.quiet) showAuth('login');
+  if (res.status === 403 && data.code === 'MustChangePassword') showAuth('change');
+  if (!res.ok) throw Object.assign(new Error(data.error || `Error ${res.status}`), { status: res.status, code: data.code });
+  return data;
+}
+
+function toast(msg, isErr, extraClass) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '') + (extraClass ? ' ' + extraClass : '');
+  el.textContent = msg;
+  $('#toasts').append(el);
+  setTimeout(() => el.remove(), isErr ? 8000 : 3500);
+}
+
+// Opens a dialog and waits for "ok". onSubmit runs; if it throws, the error is shown and the dialog stays open.
+function runDialog(dlg, onSubmit) {
+  return new Promise((resolve) => {
+    const form = $('form', dlg);
+    const handler = async (e) => {
+      if (e.submitter?.value !== 'ok') { cleanup(); dlg.close(); return resolve(false); }
+      e.preventDefault();
+      const btn = e.submitter; btn.disabled = true;
+      try { await onSubmit(form); cleanup(); dlg.close(); resolve(true); }
+      catch (err) { toast(err.message, true); }
+      finally { btn.disabled = false; }
+    };
+    const onCancel = () => { cleanup(); resolve(false); };
+    const cleanup = () => { form.removeEventListener('submit', handler); dlg.removeEventListener('cancel', onCancel); };
+    form.addEventListener('submit', handler);
+    dlg.addEventListener('cancel', onCancel);
+    showProdNote(dlg);
+    dlg.showModal();
+  });
+}
+
+const currentConn = () => state.connections.find((c) => c.id === state.connId);
+const isProd = () => currentConn()?.env === 'prod';
+const ENV_LABELS = { prod: 'Prod', test: 'Test', dev: 'Dev', other: 'Other' };
+const envBadge = (env) => `<span class="env-badge env-${esc(env)}">${esc(ENV_LABELS[env] || env)}</span>`;
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+// Adds a red line at the top of the dialog when you are working against prod.
+function showProdNote(dlg) {
+  const form = $('form', dlg);
+  let note = $(':scope > .notice.prod', form);
+  if (!note) { note = document.createElement('div'); note.className = 'notice prod'; form.prepend(note); }
+  const on = isProd() && !dlg.hasAttribute('data-noprod');
+  note.hidden = !on;
+  if (on) note.textContent = `⚠ This change is made in PRODUCTION (${currentConn().name})`;
+}
+
+// Simple "are you sure?" dialog. Returns true if the user confirms.
+function askConfirm({ title, text, extra, okText = 'Delete' }) {
+  const dlg = $('#dlgAsk');
+  $('[data-title]', dlg).textContent = title;
+  $('[data-desc]', dlg).textContent = text;
+  const ex = $('[data-extra]', dlg); ex.hidden = !extra; ex.textContent = extra || '';
+  $('[data-okbtn]', dlg).textContent = okText;
+  const p = runDialog(dlg, async () => {});
+  setTimeout(() => $('button[value=cancel]', dlg).focus(), 0); // Cancel has focus, so Enter never deletes by mistake
+  return p;
+}
+
+function genPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789-_!%';
+  const arr = new Uint32Array(20); crypto.getRandomValues(arr);
+  return [...arr].map((n) => chars[n % chars.length]).join('');
+}
+$$('[data-gen]').forEach((b) => b.addEventListener('click', () => { b.closest('.pw-wrap').querySelector('input').value = genPassword(); }));
+$$('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+  const v = b.closest('.pw-wrap').querySelector('input').value;
+  if (!v) return;
+  try { await navigator.clipboard.writeText(v); toast('Password copied'); } catch { toast('Could not copy', true); }
+}));
+
+// ---------- Role picker (role + database) ----------
+
+function roleOptions() {
+  const c = state.catalog || { builtin: { anyDb: [], adminOnly: [] }, custom: [] };
+  let html = '<option value="">Choose role…</option><optgroup label="Per database">';
+  html += c.builtin.anyDb.map((r) => `<option value="b:${r}">${r}</option>`).join('');
+  html += '</optgroup>';
+  if (c.custom.length) {
+    html += '<optgroup label="Custom roles">' + c.custom.map((r) => `<option value="c:${esc(r.role)}@${esc(r.db)}">${esc(r.role)} (${esc(r.db)})</option>`).join('') + '</optgroup>';
+  }
+  html += '<optgroup label="Whole cluster (admin)">' + c.builtin.adminOnly.map((r) => `<option value="a:${r}">${r}</option>`).join('') + '</optgroup>';
+  return html;
+}
+
+function addGrantRow(container, preset) {
+  const row = document.createElement('div');
+  row.className = 'grant-row';
+  row.innerHTML = `<select data-role>${roleOptions()}</select>
+    <input data-db list="dbList" placeholder="database">
+    <button type="button" class="btn small x" title="Remove row">✕</button>`;
+  const sel = $('[data-role]', row), db = $('[data-db]', row);
+  const sync = () => {
+    const v = sel.value;
+    if (v.startsWith('a:')) { db.value = 'admin'; db.disabled = true; }
+    else if (v.startsWith('c:')) { db.value = v.slice(v.lastIndexOf('@') + 1); db.disabled = true; }
+    else { db.disabled = false; }
+  };
+  sel.addEventListener('change', sync);
+  $('.x', row).addEventListener('click', () => row.remove());
+  if (preset?.role) sel.value = preset.role;
+  if (preset?.db) db.value = preset.db;
+  sync();
+  container.append(row);
+}
+
+function readGrants(container) {
+  return $$('.grant-row', container).map((row) => {
+    const v = $('[data-role]', row).value; const db = $('[data-db]', row).value.trim();
+    if (!v && !db) return null;
+    if (!v) throw new Error('Choose a role on every row.');
+    if (!db) throw new Error('Enter a database on every row.');
+    const role = v.startsWith('c:') ? v.slice(2, v.lastIndexOf('@')) : v.slice(2);
+    return { role, db };
+  }).filter(Boolean);
+}
+
+function setupGrantDialog(dlg, preset) {
+  const box = $('[data-grants]', dlg);
+  box.innerHTML = '';
+  addGrantRow(box, preset);
+  const addBtn = $('[data-addgrant]', dlg);
+  addBtn.onclick = () => addGrantRow(box);
+  return box;
+}
+
+// ---------- Data ----------
+
+async function loadStatus() {
+  const g = state.gen;
+  $('#conn').textContent = 'Connecting…';
+  try {
+    const s = await api('/status');
+    if (g !== state.gen) return;
+    state.me = s.connectedAs; renderUsers();
+    $('#conn').innerHTML = `Signed in as <b>${esc(s.connectedAs)}</b> · ${esc(s.host)} · MongoDB ${esc(s.serverVersion)}`;
+    $('#conn').title = `Signed in to MongoDB as ${s.connectedAs} · ${s.host} · MongoDB ${s.serverVersion}`;
+    if (!s.authEnabled) $('#conn').innerHTML += ' · <span style="color:var(--warn)">authentication is disabled on the server</span>';
+  } catch (e) { if (g === state.gen) $('#conn').innerHTML = `<span style="color:var(--danger)">${esc(e.message)}</span>`; }
+}
+
+async function loadMeta() {
+  const g = state.gen;
+  const [d, c] = await Promise.all([api('/databases'), api('/roles/catalog')]);
+  if (g !== state.gen) return;
+  state.databases = d.databases; state.catalog = c;
+  $('#dbList').innerHTML = state.databases.map((n) => `<option value="${esc(n)}">`).join('');
+}
+
+async function loadUsers() {
+  const g = state.gen;
+  try {
+    const users = (await api('/users')).users;
+    if (g !== state.gen) return;
+    state.users = users;
+    const dbs = [...new Set(state.users.map((u) => u.db))].sort();
+    const f = $('#userDbFilter'), cur = f.value;
+    f.innerHTML = '<option value="">All auth databases</option>' + dbs.map((d) => `<option>${esc(d)}</option>`).join('');
+    f.value = dbs.includes(cur) ? cur : '';
+    renderUsers();
+  } catch (e) {
+    if (g === state.gen) $('#usersBody').innerHTML = `<tr><td colspan="3" class="empty">Could not read users: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function loadRoles() {
+  const g = state.gen;
+  try { const roles = (await api('/roles')).roles; if (g !== state.gen) return; state.roles = roles; renderRoles(); }
+  catch (e) { if (g === state.gen) $('#rolesList').innerHTML = `<div class="card empty">Could not read roles: ${esc(e.message)}</div>`; }
+}
+
+async function loadAudit() {
+  try { const a = await api('/audit'); state.audit = a.entries; $('#auditFile').textContent = a.file.split(/[\\/]/).pop(); $('#auditFile').title = a.file; renderAudit(); }
+  catch (e) { $('#auditBody').innerHTML = `<tr><td colspan="6" class="empty">${esc(e.message)}</td></tr>`; }
+}
+
+async function refreshAll() {
+  if (!state.connId) return;
+  await loadMeta().catch((e) => toast(e.message, true));
+  state.matrix = null;
+  const tasks = [loadUsers(), loadRoles(), loadAudit()];
+  if (activeView() === 'matrix') tasks.push(loadMatrix());
+  await Promise.all(tasks);
+}
+
+const activeView = () => $('nav button.active')?.dataset.view || 'users';
+
+// ---------- Rendering: users ----------
+
+const isAdminRole = (r) => r.db === 'admin';
+const isMe = (u) => state.me === `${u.user}@${u.db}`;
+const SELF_WARN = 'Note: this is the account the app itself is signed in with. You could lock yourself out.';
+
+function renderUsers() {
+  const q = $('#userSearch').value.trim().toLowerCase();
+  const dbf = $('#userDbFilter').value;
+  const list = state.users.filter((u) =>
+    (!dbf || u.db === dbf) &&
+    (!q || u.user.toLowerCase().includes(q) || u.db.toLowerCase().includes(q) || u.roles.some((r) => (r.role + ' ' + r.db).toLowerCase().includes(q))));
+  if (!list.length) {
+    $('#usersBody').innerHTML = `<tr><td colspan="3" class="empty">${state.users.length ? 'No matches.' : 'No users yet. Click "New user".'}</td></tr>`;
+    return;
+  }
+  $('#usersBody').innerHTML = list.map((u, i) => `
+    <tr data-i="${state.users.indexOf(u)}">
+      <td><div class="name">${esc(u.user)}${isMe(u) ? ' <span class="chip noclose admin" title="The app is signed in with this account">you</span>' : ''}</div><div class="sub">auth: ${esc(u.db)}</div></td>
+      <td><div class="chips">${u.roles.length ? u.roles.map((r, j) => `
+        <span class="chip ${isAdminRole(r) ? 'admin' : ''}">${esc(r.role)} <span class="db">· ${esc(r.db)}</span>
+          <button title="Remove this access" data-revoke="${j}">×</button></span>`).join('') : '<span class="sub">No access</span>'}
+      </div></td>
+      <td class="actions">
+        <button class="btn small" data-act="grant">+ Access</button>
+        <button class="btn small" data-act="pw">Password</button>
+        <button class="btn small danger" data-act="drop">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+$('#usersBody').addEventListener('click', async (e) => {
+  const tr = e.target.closest('tr[data-i]'); if (!tr) return;
+  const u = state.users[+tr.dataset.i];
+  const base = `/users/${enc(u.db)}/${enc(u.user)}`;
+  if (e.target.dataset.revoke !== undefined) {
+    const r = u.roles[+e.target.dataset.revoke];
+    if (!await askConfirm({
+      title: 'Remove access?',
+      text: `Are you sure you want to remove ${r.role} on ${r.db} from ${u.user}?`,
+      extra: isMe(u) ? SELF_WARN : '',
+      okText: 'Remove access',
+    })) return;
+    try { await api(base + '/revoke', { method: 'POST', body: { roles: [r] } }); toast(`Access removed from ${u.user}`); refreshAll(); }
+    catch (err) { toast(err.message, true); }
+    return;
+  }
+  const act = e.target.dataset.act;
+  if (act === 'grant') {
+    const dlg = $('#dlgGrant'); $('[data-desc]', dlg).textContent = `User: ${u.user} (auth: ${u.db})`;
+    const box = setupGrantDialog(dlg);
+    if (await runDialog(dlg, async () => {
+      const roles = readGrants(box); if (!roles.length) throw new Error('Add at least one role.');
+      await api(base + '/grant', { method: 'POST', body: { roles } });
+    })) { toast(`Access granted to ${u.user}`); refreshAll(); }
+  } else if (act === 'pw') {
+    const dlg = $('#dlgPassword'); $('[data-desc]', dlg).textContent = `User: ${u.user} (auth: ${u.db})`;
+    $('[name=password]', dlg).value = '';
+    if (await runDialog(dlg, async (f) => {
+      await api(base + '/password', { method: 'POST', body: { password: f.password.value } });
+    })) { toast(`The password for ${u.user} has been changed`); loadAudit(); }
+  } else if (act === 'drop') {
+    if (await confirmDelete('Delete user', `The user ${u.user} (auth: ${u.db}) is deleted permanently and loses all access.` + (isMe(u) ? ' ' + SELF_WARN : ''), u.user,
+      () => api(base, { method: 'DELETE' }))) { toast(`${u.user} has been deleted`); refreshAll(); }
+  }
+});
+
+function confirmDelete(title, text, word, fn) {
+  const dlg = $('#dlgConfirm');
+  $('[data-title]', dlg).textContent = title;
+  $('[data-desc]', dlg).textContent = text;
+  $('[data-label]', dlg).textContent = `Type "${word}" to confirm`;
+  const input = $('[name=confirm]', dlg), ok = $('[data-okbtn]', dlg);
+  input.value = ''; ok.disabled = true;
+  input.oninput = () => { ok.disabled = input.value !== word; };
+  return runDialog(dlg, fn);
+}
+
+$('#btnNewUser').addEventListener('click', async () => {
+  const dlg = $('#dlgNewUser'); const f = $('form', dlg);
+  f.user.value = ''; f.db.value = 'admin'; f.password.value = genPassword();
+  const box = setupGrantDialog(dlg);
+  if (await runDialog(dlg, async (form) => {
+    const roles = readGrants(box);
+    await api('/users', { method: 'POST', body: { user: form.user.value, db: form.db.value, password: form.password.value, roles } });
+  })) { toast(`The user ${f.user.value} has been created`); refreshAll(); }
+});
+
+// ---------- Rendering: roles ----------
+
+function describeResource(res) {
+  if (res.cluster) return 'The cluster';
+  if (res.anyResource) return 'Everything';
+  const db = res.db || 'all databases', coll = res.collection || 'all collections';
+  return `${db} · ${coll}`;
+}
+
+function renderRoles() {
+  const q = $('#roleSearch').value.trim().toLowerCase();
+  const list = state.roles.filter((r) => !q || (r.role + ' ' + r.db).toLowerCase().includes(q));
+  if (!list.length) {
+    $('#rolesList').innerHTML = `<div class="card empty">${state.roles.length ? 'No matches.' : 'No custom roles yet. The built-in roles (read, readWrite …) always exist and can be granted directly to users.'}</div>`;
+    return;
+  }
+  $('#rolesList').innerHTML = list.map((r) => {
+    const i = state.roles.indexOf(r);
+    return `<div class="card role-card" data-i="${i}">
+      <div class="head">
+        <h3>${esc(r.role)} <span class="sub">in ${esc(r.db)}</span></h3>
+        <span class="spacer"></span>
+        <button class="btn small" data-act="privs">Edit privileges</button>
+        <button class="btn small danger" data-act="drop">Delete</button>
+      </div>
+      <div class="section">
+        <div class="section-title">Members (${r.members.length}) <button class="btn small" data-act="member">+ Member</button></div>
+        <div class="chips">${r.members.length ? r.members.map((m, j) => `<span class="chip">${esc(m.user)} <span class="db">· ${esc(m.db)}</span><button title="Remove from the role" data-rmmember="${j}">×</button></span>`).join('') : '<span class="sub">No members</span>'}</div>
+      </div>
+      ${r.privileges.length ? `<div class="section"><div class="section-title">Privileges</div>
+        <table class="privs">${r.privileges.map((p) => `<tr><td style="width:34%">${esc(describeResource(p.resource))}</td><td class="mono">${p.actions.map(esc).join(', ')}</td></tr>`).join('')}</table></div>` : ''}
+      <div class="section">
+        <div class="section-title">Inherits <button class="btn small" data-act="inherit">+ Inherit role</button></div>
+        <div class="chips">${r.roles.length ? r.roles.map((x, j) => `<span class="chip">${esc(x.role)} <span class="db">· ${esc(x.db)}</span><button title="Stop inheriting" data-rminherit="${j}">×</button></span>`).join('') : '<span class="sub">No inherited roles</span>'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+$('#rolesList').addEventListener('click', async (e) => {
+  const card = e.target.closest('.role-card'); if (!card) return;
+  const r = state.roles[+card.dataset.i];
+  const base = `/roles/${enc(r.db)}/${enc(r.role)}`;
+  const me = { role: r.role, db: r.db };
+  try {
+    if (e.target.dataset.rmmember !== undefined) {
+      const m = r.members[+e.target.dataset.rmmember];
+      if (!await askConfirm({
+        title: 'Remove member?',
+        text: `Are you sure you want to remove ${m.user} from the role ${r.role}? ${m.user} loses the access the role gives.`,
+        extra: isMe(m) ? SELF_WARN : '',
+        okText: 'Remove member',
+      })) return;
+      await api(`/users/${enc(m.db)}/${enc(m.user)}/revoke`, { method: 'POST', body: { roles: [me] } });
+      toast(`${m.user} has been removed from ${r.role}`); return refreshAll();
+    }
+    if (e.target.dataset.rminherit !== undefined) {
+      const x = r.roles[+e.target.dataset.rminherit];
+      if (!await askConfirm({
+        title: 'Stop inheriting role?',
+        text: `Are you sure? The role ${r.role} stops inheriting ${x.role} (${x.db}), and all ${r.members.length} members lose that access.`,
+        okText: 'Stop inheriting',
+      })) return;
+      await api(base + '/revoke', { method: 'POST', body: { roles: [x] } });
+      toast('Inherited role removed'); return refreshAll();
+    }
+  } catch (err) { return toast(err.message, true); }
+
+  const act = e.target.dataset.act;
+  if (act === 'member') {
+    const dlg = $('#dlgMember'); $('[data-desc]', dlg).textContent = `Role: ${r.role} (${r.db})`;
+    const candidates = state.users.filter((u) => !r.members.some((m) => m.user === u.user && m.db === u.db));
+    $('[name=user]', dlg).innerHTML = candidates.length
+      ? candidates.map((u) => `<option value="${state.users.indexOf(u)}">${esc(u.user)} (${esc(u.db)})</option>`).join('')
+      : '<option value="">All users are already members</option>';
+    if (await runDialog(dlg, async (f) => {
+      if (!f.user.value) throw new Error('Choose a user.');
+      const u = state.users[+f.user.value];
+      await api(`/users/${enc(u.db)}/${enc(u.user)}/grant`, { method: 'POST', body: { roles: [me] } });
+    })) { toast('Member added'); refreshAll(); }
+  } else if (act === 'inherit') {
+    const dlg = $('#dlgGrant'); $('[data-desc]', dlg).textContent = `The role ${r.role} gets all privileges from the roles you choose.`;
+    const box = setupGrantDialog(dlg);
+    if (await runDialog(dlg, async () => {
+      const roles = readGrants(box); if (!roles.length) throw new Error('Add at least one role.');
+      await api(base + '/grant', { method: 'POST', body: { roles } });
+    })) { toast('Role updated'); refreshAll(); }
+  } else if (act === 'privs') {
+    if (await openRoleDialog(r)) { toast('Privileges saved'); refreshAll(); }
+  } else if (act === 'drop') {
+    const warn = r.members.length ? ` ${r.members.length} users lose the access the role gave.` : '';
+    if (await confirmDelete('Delete role', `The role ${r.role} (${r.db}) is deleted permanently.${warn}`, r.role,
+      () => api(base, { method: 'DELETE' }))) { toast(`The role ${r.role} has been deleted`); refreshAll(); }
+  }
+});
+
+// ---------- Privilege editor ----------
+
+const ACTION_GROUPS = [
+  ['Read', ['find', 'listCollections', 'listIndexes', 'collStats', 'dbStats', 'changeStream']],
+  ['Write', ['insert', 'update', 'remove']],
+  ['Structure', ['createCollection', 'createIndex', 'dropIndex', 'dropCollection', 'collMod', 'renameCollectionSameDB']],
+];
+const PRESETS = {
+  read: ['find', 'listCollections', 'listIndexes', 'collStats', 'dbStats'],
+  write: ['find', 'listCollections', 'listIndexes', 'collStats', 'dbStats', 'insert', 'update', 'remove'],
+};
+
+function addPrivRow(container, preset, defaultDb) {
+  const row = document.createElement('div');
+  row.className = 'priv-row';
+  const known = new Set(ACTION_GROUPS.flatMap((g) => g[1]));
+  const extra = (preset?.actions || []).filter((a) => !known.has(a));
+  row.innerHTML = `
+    <div class="grant-row">
+      <input data-pdb list="dbList" placeholder="database (empty = all)">
+      <input data-pcoll placeholder="collection (empty = all)">
+      <button type="button" class="btn small x" title="Remove">✕</button>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      <button type="button" class="btn small" data-preset="read">Read only</button>
+      <button type="button" class="btn small" data-preset="write">Read + write</button>
+      <button type="button" class="btn small" data-preset="none">Clear</button>
+    </div>
+    <div class="actions-grid">${ACTION_GROUPS.map(([g, acts]) => `<div class="grp">${g}</div>` +
+      acts.map((a) => `<label><input type="checkbox" value="${a}"> <span class="mono">${a}</span></label>`).join('')).join('')}
+      ${extra.length ? '<div class="grp">Other</div>' + extra.map((a) => `<label><input type="checkbox" value="${esc(a)}" checked> <span class="mono">${esc(a)}</span></label>`).join('') : ''}
+    </div>`;
+  const pdb = $('[data-pdb]', row), pcoll = $('[data-pcoll]', row);
+  if (preset) {
+    pdb.value = preset.resource?.db ?? ''; pcoll.value = preset.resource?.collection ?? '';
+    const set = new Set(preset.actions);
+    $$('input[type=checkbox]', row).forEach((c) => { c.checked = set.has(c.value); });
+  } else {
+    pdb.value = defaultDb || '';
+    $$('input[type=checkbox]', row).forEach((c) => { c.checked = PRESETS.read.includes(c.value); });
+  }
+  row.addEventListener('click', (e) => {
+    const p = e.target.dataset.preset; if (!p) return;
+    $$('input[type=checkbox]', row).forEach((c) => { c.checked = p !== 'none' && PRESETS[p].includes(c.value); });
+  });
+  $('.x', row).addEventListener('click', () => row.remove());
+  container.append(row);
+}
+
+function readPrivs(container) {
+  return $$('.priv-row', container).map((row) => {
+    const actions = $$('input[type=checkbox]:checked', row).map((c) => c.value);
+    if (!actions.length) throw new Error('Each privilege needs at least one selected action.');
+    return { db: $('[data-pdb]', row).value.trim(), collection: $('[data-pcoll]', row).value.trim(), actions };
+  });
+}
+
+// Without an argument: create a new role. With a role: edit its privileges.
+function openRoleDialog(existing) {
+  const dlg = $('#dlgRole'); const f = $('form', dlg);
+  const privBox = $('[data-privs]', dlg), grantBox = $('[data-grants]', dlg);
+  privBox.innerHTML = ''; grantBox.innerHTML = '';
+  $('[data-namerow]', dlg).hidden = !!existing;
+  $('[data-inheritfield]', dlg).hidden = !!existing;
+  $('[data-title]', dlg).textContent = existing ? `Privileges for ${existing.role}` : 'New role';
+  $('[data-desc]', dlg).textContent = existing
+    ? `Role in ${existing.db}. The list below replaces the role's current privileges.`
+    : 'A role bundles privileges. Then add users as members.';
+  $('[data-okbtn]', dlg).textContent = existing ? 'Save' : 'Create role';
+  if (existing) existing.privileges.forEach((p) => addPrivRow(privBox, p));
+  else { f.role.value = ''; f.db.value = 'admin'; addPrivRow(privBox, null, ''); }
+  $('[data-addpriv]', dlg).onclick = () => addPrivRow(privBox, null, existing ? existing.db : (f.db.value === 'admin' ? '' : f.db.value));
+  $('[data-addgrant]', dlg).onclick = () => addGrantRow(grantBox);
+  return runDialog(dlg, async (form) => {
+    const privileges = readPrivs(privBox);
+    if (existing) {
+      await api(`/roles/${enc(existing.db)}/${enc(existing.role)}/privileges`, { method: 'PUT', body: { privileges } });
+    } else {
+      await api('/roles', { method: 'POST', body: { role: form.role.value, db: form.db.value, privileges, roles: readGrants(grantBox) } });
+    }
+  });
+}
+
+$('#btnNewRole').addEventListener('click', async () => {
+  if (await openRoleDialog()) { toast('The role has been created'); refreshAll(); }
+});
+
+// ---------- Rendering: audit log ----------
+
+const ACTION_LABELS = {
+  createUser: 'Created user', dropUser: 'Deleted user', changePassword: 'Changed password',
+  grantRolesToUser: 'Granted access', revokeRolesFromUser: 'Removed access',
+  createRole: 'Created role', dropRole: 'Deleted role', updateRolePrivileges: 'Changed privileges',
+  grantRolesToRole: 'Role inherits', revokeRolesFromRole: 'Role stops inheriting', exportReport: 'Exported report',
+  login: 'Signed in to the app', loginFailed: 'Failed app sign-in', appSetup: 'Created first app admin',
+  createAppUser: 'Created app account', changeAppRole: 'Changed app role', resetAppPassword: 'Reset app password',
+  deleteAppUser: 'Deleted app account', changeAppPassword: 'Changed own app password',
+};
+
+function detailText(e) {
+  const d = e.details || {};
+  const parts = [];
+  if (d.roles?.length) parts.push(d.roles.map((r) => `${r.role} · ${r.db}`).join(', '));
+  if (d.connections?.length) parts.push('Connections: ' + d.connections.join(', '));
+  if (d.role) parts.push('Role: ' + d.role);
+  if (d.ip) parts.push('From ' + d.ip);
+  if (d.privileges?.length) parts.push(d.privileges.map((p) => `${p.resource.db || '*'}.${p.resource.collection || '*'}: ${p.actions.join(', ')}`).join('; '));
+  return parts.join(' | ');
+}
+
+function renderAudit() {
+  const q = $('#auditSearch').value.trim().toLowerCase();
+  const only = $('#auditOnlyThis').checked;
+  const list = state.audit.filter((e) => (!only || !e.connectionId || e.connectionId === state.connId) &&
+    (!q || JSON.stringify(e).toLowerCase().includes(q) || (ACTION_LABELS[e.action] || '').toLowerCase().includes(q)));
+  if (!list.length) { $('#auditBody').innerHTML = `<tr><td colspan="6" class="empty">${state.audit.length ? 'No matches.' : 'No changes logged yet.'}</td></tr>`; return; }
+  $('#auditBody').innerHTML = list.map((e) => `<tr>
+    <td class="mono">${esc(new Date(e.ts).toLocaleString('sv-SE'))}</td>
+    <td>${e.connection ? `${esc(e.connection)}<br>${envBadge(e.env || 'other')}` : '<span class="sub">–</span>'}</td>
+    <td>${e.ok ? '<span class="ok">✓</span>' : '<span class="fail">✕</span>'} ${esc(ACTION_LABELS[e.action] || e.action)}
+      ${e.ok ? '' : `<div class="sub" style="color:var(--danger)">${esc(e.error)}</div>`}</td>
+    <td class="name">${esc(e.target)}</td>
+    <td class="sub">${esc(detailText(e))}</td>
+    <td class="sub">${e.appUser ? `<b style="color:var(--text)">${esc(e.appUser)}</b><br>` : ''}${esc(e.actor || (e.appUser ? '' : '–'))}</td>
+  </tr>`).join('');
+}
+
+// ---------- Navigation ----------
+
+const VIEWS = ['users', 'roles', 'matrix', 'audit', 'guide'];
+$$('nav button').forEach((b) => b.addEventListener('click', () => {
+  $$('nav button').forEach((x) => x.classList.toggle('active', x === b));
+  VIEWS.forEach((v) => { $('#view-' + v).hidden = v !== b.dataset.view; });
+  $('#view-noconn').hidden = !!state.connId || b.dataset.view === 'guide';
+  if (b.dataset.view === 'guide') window.scrollTo(0, 0);
+  if (b.dataset.view === 'audit') loadAudit();
+  if (b.dataset.view === 'matrix' && !state.matrix) loadMatrix();
+}));
+$$('[data-refresh]').forEach((b) => b.addEventListener('click', refreshAll));
+$$('[data-goto]').forEach((b) => b.addEventListener('click', () => $(`nav button[data-view="${b.dataset.goto}"]`).click()));
+$('#userSearch').addEventListener('input', renderUsers);
+$('#userDbFilter').addEventListener('change', renderUsers);
+$('#roleSearch').addEventListener('input', renderRoles);
+$('#auditSearch').addEventListener('input', renderAudit);
+$('#auditOnlyThis').addEventListener('change', renderAudit);
+
+// ---------- Matrix ----------
+
+const LEVEL_LABELS = { owner: 'Owner', write: 'Write', read: 'Read', other: 'Other' };
+const CLUSTER_LABELS = { full: 'Full (root)', admin: 'Admin', monitor: 'Monitor' };
+const LEVEL_TEXT = {
+  owner: 'can read, write, administer the database and grant access',
+  write: 'can read and change data',
+  read: 'can read data',
+  other: 'has other privileges but cannot read data',
+};
+const lvRank = (l) => ['other', 'read', 'write', 'owner'].indexOf(l);
+
+async function loadMatrix() {
+  const g = state.gen;
+  try {
+    const m = await api('/matrix');
+    if (g !== state.gen) return;
+    state.matrix = m;
+    const cur = $('#mxDb').value;
+    $('#mxDb').innerHTML = '<option value="">All databases</option>' + m.databases.map((d) => `<option>${esc(d)}</option>`).join('');
+    $('#mxDb').value = m.databases.includes(cur) ? cur : '';
+    renderMatrix();
+  } catch (e) {
+    if (g === state.gen) $('#mxWrap').innerHTML = `<div class="empty">Could not compute the matrix: ${esc(e.message)}</div>`;
+  }
+}
+
+function userMatches(u, filter, q) {
+  const cells = Object.values(u.cells);
+  if (q && !(u.user.toLowerCase().includes(q) || u.db.toLowerCase().includes(q) || u.roles.some((r) => `${r.role}@${r.db}`.toLowerCase().includes(q)))) return false;
+  if (filter === 'write') return cells.some((c) => lvRank(c.level) >= 2) || u.cluster === 'full';
+  if (filter === 'useradmin') return cells.some((c) => c.userAdmin) || u.cluster === 'full';
+  if (filter === 'none') return !cells.some((c) => c.level) && !u.cluster;
+  return true;
+}
+
+function renderMatrix() {
+  const m = state.matrix; if (!m) return;
+  const q = $('#mxSearch').value.trim().toLowerCase();
+  const filter = $('#mxFilter').value;
+  const onlyDb = $('#mxDb').value;
+  const users = m.users.filter((u) => userMatches(u, filter, q) && (!onlyDb || (u.cells[onlyDb] && u.cells[onlyDb].level)));
+  let dbs = onlyDb ? [onlyDb] : m.databases;
+  if ($('#mxHideEmpty').checked && !onlyDb) dbs = dbs.filter((d) => m.users.some((u) => u.cells[d] && u.cells[d].level));
+
+  const writers = m.users.filter((u) => userMatches(u, 'write', '')).length;
+  const admins = m.users.filter((u) => userMatches(u, 'useradmin', '')).length;
+  $('#mxSummary').innerHTML = `<b>${m.users.length}</b> users · <b>${m.databases.length}</b> databases · <b>${writers}</b> with write access · <b>${admins}</b> can grant access`
+    + (users.length !== m.users.length ? ` · showing ${users.length}` : '')
+    + (m.unknownRoles.length ? ` · <span style="color:var(--warn)">could not read the roles ${esc(m.unknownRoles.join(', '))}</span>` : '');
+
+  if (!users.length) { $('#mxWrap').innerHTML = '<div class="empty">No users match the filter.</div>'; return; }
+  const cell = (u, ui, d) => {
+    const c = u.cells[d];
+    const label = `${u.user} in ${d}`;
+    if (!c || !c.level) return `<td class="mx"><button type="button" class="mx-btn mx-none" data-u="${ui}" data-d="${esc(d)}" aria-label="${esc(label)}: no access" title="No access">·</button></td>`;
+    const tags = [];
+    if (c.partial) tags.push('partial');
+    if (c.dbAdmin && c.level !== 'owner') tags.push('+DB admin');
+    if (c.userAdmin && c.level !== 'owner') tags.push('+access');
+    const title = `${label}: ${LEVEL_LABELS[c.level]}${c.partial ? ' (only ' + c.collections.join(', ') + ')' : ''}`;
+    return `<td class="mx"><button type="button" class="mx-btn lv-${c.level}${c.partial ? ' partial' : ''}" data-u="${ui}" data-d="${esc(d)}" title="${esc(title)}" aria-label="${esc(title)}">
+      <span class="l">${LEVEL_LABELS[c.level]}</span>${tags.length ? `<span class="t">${esc(tags.join(' '))}</span>` : ''}</button></td>`;
+  };
+  $('#mxWrap').innerHTML = `<table class="matrix"><thead><tr>
+      <th class="mx-user">User</th>
+      ${dbs.map((d) => `<th title="${esc(d)}">${esc(d)}</th>`).join('')}
+      <th class="mx-cl" title="Privileges for the whole server">Cluster</th>
+    </tr></thead><tbody>
+    ${users.map((u) => {
+      const ui = m.users.indexOf(u);
+      const me = state.me === `${u.user}@${u.db}`;
+      return `<tr><th class="mx-user" scope="row" style="text-align:left;font-weight:400">
+          <div class="name">${esc(u.user)}${me ? ' <span class="chip noclose admin">you</span>' : ''}</div><div class="sub">auth: ${esc(u.db)}</div></th>
+        ${dbs.map((d) => cell(u, ui, d)).join('')}
+        <td class="mx-clu">${u.cluster ? esc(CLUSTER_LABELS[u.cluster]) : ''}</td></tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
+function scopeLabel(sc) {
+  if (sc.kind === 'any') return 'Everything on the server';
+  if (sc.kind === 'allDbs') return 'All databases';
+  if (sc.kind === 'db') return 'Whole database';
+  return `Collection ${sc.collection}${sc.allDbs ? ' (in all databases)' : ''}`;
+}
+
+function openCell(ui, dbName) {
+  const u = state.matrix.users[ui];
+  const c = u.cells[dbName];
+  const dlg = $('#dlgCell');
+  $('[data-title]', dlg).textContent = `${u.user} in ${dbName}`;
+  let desc;
+  if (!c || !c.level) desc = `${u.user} has no access to ${dbName}.`;
+  else {
+    desc = `${u.user} ${LEVEL_TEXT[c.level]}`;
+    desc += c.partial ? `, but only in ${c.collections.join(', ')}.` : ` in all of ${dbName}.`;
+    if (c.dbAdmin && c.level !== 'owner') desc += ' Can also administer the database (e.g. drop it).';
+    if (c.userAdmin && c.level !== 'owner') desc += ' Can also create users and grant roles, and can therefore give itself more access.';
+  }
+  $('[data-desc]', dlg).textContent = desc;
+
+  const sources = (c && c.sources) || [];
+  $('[data-sources]', dlg).innerHTML = sources.length ? '<div class="section-title">Comes from</div>' + sources.map((s, i) => {
+    const wide = s.scopes.some((sc) => sc.kind === 'any' || sc.kind === 'allDbs');
+    return `<div class="src">
+      <div class="src-head">
+        <span class="name">${esc(s.role)}</span><span class="sub">@${esc(s.db)} · ${s.builtin ? 'built-in role' : 'custom role'}</span>
+        <span class="grow"></span>
+        <button type="button" class="btn small danger" data-revoke="${i}">Remove the role from ${esc(u.user)}</button>
+      </div>
+      ${wide ? '<div class="sub" style="color:var(--warn);margin-top:4px">The role applies to more databases than this one.</div>' : ''}
+      <ul>${s.scopes.map((sc) => `<li>${esc(scopeLabel(sc))}
+        <details><summary>${sc.actions.length} actions</summary><span class="mono">${sc.actions.map(esc).join(', ')}</span></details></li>`).join('')}</ul>
+    </div>`;
+  }).join('') : '';
+
+  $('[data-sources]', dlg).onclick = async (e) => {
+    const i = e.target.dataset.revoke; if (i === undefined) return;
+    const s = sources[+i];
+    const others = state.matrix.databases.filter((d) => d !== dbName && (u.cells[d]?.sources || []).some((x) => x.role === s.role && x.db === s.db));
+    dlg.close();
+    const ok = await askConfirm({
+      title: 'Remove access?',
+      text: `Are you sure you want to remove the role ${s.role}@${s.db} from ${u.user}?`,
+      extra: [others.length ? `The role also gives access to: ${others.join(', ')}. That access disappears too.` : '',
+        state.me === `${u.user}@${u.db}` ? SELF_WARN : ''].filter(Boolean).join(' '),
+      okText: 'Remove access',
+    });
+    if (!ok) return dlg.showModal();
+    try {
+      await api(`/users/${enc(u.db)}/${enc(u.user)}/revoke`, { method: 'POST', body: { roles: [{ role: s.role, db: s.db }] } });
+      toast(`${s.role}@${s.db} has been removed from ${u.user}`);
+      refreshAll();
+    } catch (err) { toast(err.message, true); }
+  };
+
+  $('[data-grant]', dlg).onclick = async () => {
+    dlg.close();
+    const g = $('#dlgGrant'); $('[data-desc]', g).textContent = `User: ${u.user} (auth: ${u.db})`;
+    const box = setupGrantDialog(g, { db: dbName });
+    if (await runDialog(g, async () => {
+      const roles = readGrants(box); if (!roles.length) throw new Error('Add at least one role.');
+      await api(`/users/${enc(u.db)}/${enc(u.user)}/grant`, { method: 'POST', body: { roles } });
+    })) { toast(`Access granted to ${u.user}`); refreshAll(); }
+  };
+  showProdNote(dlg);
+  dlg.showModal();
+}
+
+$('#mxWrap').addEventListener('click', (e) => {
+  const b = e.target.closest('.mx-btn'); if (!b) return;
+  openCell(+b.dataset.u, b.dataset.d);
+});
+['#mxSearch', '#mxFilter', '#mxDb', '#mxHideEmpty'].forEach((sel) => $(sel).addEventListener(sel === '#mxSearch' ? 'input' : 'change', renderMatrix));
+
+// ---------- Export ----------
+
+async function download(path, headers) {
+  const res = await fetch('/api' + path, { headers: { 'X-Requested-With': 'mongo-admin', ...headers } });
+  if (res.status === 401) showAuth('login');
+  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Error ${res.status}`); }
+  const blob = await res.blob();
+  const name = res.headers.get('X-Filename') || 'access-report.xlsx';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  return name;
+}
+
+$('#btnExport').addEventListener('click', async () => {
+  const dlg = $('#dlgExport');
+  $('[data-current]', dlg).textContent = currentConn()?.name || '';
+  $('[data-allcount]', dlg).textContent = `${state.connections.length} connections in one file, one sheet per connection`;
+  $('input[value=current]', dlg).checked = true;
+  const ok = await runDialog(dlg, async (f) => {
+    const btn = $('[data-okbtn]', dlg); const old = btn.textContent; btn.textContent = 'Creating report…';
+    try {
+      const name = f.scope.value === 'all'
+        ? await download('/report-all.xlsx')
+        : await download('/report.xlsx', { 'X-Connection': state.connId });
+      toast(`The report ${name} has been downloaded`);
+    } finally { btn.textContent = old; }
+  });
+  if (ok) loadAudit();
+});
+
+// ---------- Theme ----------
+
+function applyTheme(t) {
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  else delete document.documentElement.dataset.theme;
+  $$('[data-theme-set]').forEach((b) => b.classList.toggle('active', b.dataset.themeSet === (t || 'auto')));
+}
+$$('[data-theme-set]').forEach((b) => b.addEventListener('click', () => {
+  lsSet('theme', b.dataset.themeSet); applyTheme(b.dataset.themeSet);
+}));
+applyTheme(lsGet('theme') || 'auto');
+
+// ---------- Connections ----------
+
+async function loadConnections() {
+  state.connections = (await api('/connections')).connections;
+  const sel = $('#connSelect');
+  sel.innerHTML = state.connections.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  sel.hidden = !state.connections.length;
+}
+
+function selectConnection(id) {
+  const conn = state.connections.find((c) => c.id === id) || state.connections[0];
+  state.gen++;
+  state.connId = conn ? conn.id : null;
+  state.users = []; state.roles = []; state.me = ''; state.catalog = null; state.matrix = null;
+  $('#mxWrap').innerHTML = '<div class="empty">Loading…</div>'; $('#mxSummary').textContent = '';
+  $('#connSelect').value = state.connId || '';
+  if (conn) lsSet('connection', conn.id);
+
+  const badge = $('#envBadge');
+  badge.hidden = !conn;
+  if (conn) { badge.className = `env-badge env-${conn.env}`; badge.textContent = ENV_LABELS[conn.env] || conn.env; }
+  const prod = !!conn && conn.env === 'prod';
+  const wasProd = document.body.classList.contains('is-prod');
+  document.body.classList.toggle('is-prod', prod);
+  $('#prodBanner').hidden = !prod;
+  if (prod) {
+    $('#prodBanner').innerHTML = `⚠ Production <span class="pb-name">${esc(conn.name)}</span> ⚠<span class="pb-sub">Changes affect real users immediately. Double-check before you click.</span>`;
+    if (!wasProd) toast(`You are now working in PRODUCTION (${conn.name})`, true, 'prod-toast');
+  } else {
+    $$('.prod-toast').forEach((t) => t.remove());
+  }
+  // Browser tab: "PROD" in the title and a red icon, so it is visible even among other tabs.
+  document.title = prod ? `🔴 PROD · ${conn.name} · MongoDB Access Admin` : (conn ? `${conn.name} · MongoDB Access Admin` : 'MongoDB Access Admin');
+  const color = prod ? '%23d92d20' : '%2300684a';
+  $('#favicon').href = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='${color}'/%3E%3C/svg%3E`;
+
+  // Without a connection only the Guide tab is shown.
+  $$('nav button').forEach((b) => { b.hidden = !conn && b.dataset.view !== 'guide'; });
+  let active = $('nav button.active')?.dataset.view || 'users';
+  if (!conn && active !== 'guide') {
+    $$('nav button').forEach((x) => x.classList.remove('active'));
+    active = 'none';
+  } else if (conn && !$('nav button.active')) {
+    $('nav button[data-view="users"]').classList.add('active'); active = 'users';
+  }
+  $('#view-noconn').hidden = !!conn || active === 'guide';
+  VIEWS.forEach((v) => { $('#view-' + v).hidden = v !== active || (!conn && v !== 'guide'); });
+  if (!conn) { $('#conn').textContent = ''; return; }
+
+  $('#usersBody').innerHTML = '<tr><td colspan="3" class="empty">Loading…</td></tr>';
+  $('#rolesList').innerHTML = '<div class="card empty">Loading…</div>';
+  loadStatus();
+  refreshAll();
+}
+
+$('#connSelect').addEventListener('change', (e) => selectConnection(e.target.value));
+
+function renderConnList() {
+  const box = $('#dlgConnections [data-list]');
+  box.innerHTML = state.connections.length ? state.connections.map((c) => `
+    <div class="conn-item" data-id="${esc(c.id)}">
+      ${envBadge(c.env)}
+      <div class="grow"><div class="name">${esc(c.name)}${c.id === state.connId ? ' <span class="sub">(selected)</span>' : ''}</div>
+        <div class="mono sub">${esc(c.uri)}</div></div>
+      <button type="button" class="btn small" data-edit>Edit</button>
+      <button type="button" class="btn small danger" data-del>Delete</button>
+    </div>`).join('') : '<p class="sub">No connections yet.</p>';
+}
+
+$('#dlgConnections [data-list]').addEventListener('click', async (e) => {
+  const item = e.target.closest('.conn-item'); if (!item) return;
+  const c = state.connections.find((x) => x.id === item.dataset.id);
+  if (e.target.hasAttribute('data-edit')) {
+    await openConnEdit(c);
+  } else if (e.target.hasAttribute('data-del')) {
+    const dlgList = $('#dlgConnections');
+    dlgList.close();
+    const ok = await askConfirm({
+      title: 'Delete connection?',
+      text: `Are you sure you want to delete the connection "${c.name}"? Only the setting in the app is removed; the server and its users are not affected.`,
+      okText: 'Delete connection',
+    });
+    if (ok) {
+      try { await api(`/connections/${enc(c.id)}`, { method: 'DELETE' }); toast(`The connection ${c.name} has been deleted`); }
+      catch (err) { toast(err.message, true); }
+      await loadConnections();
+      if (c.id === state.connId) selectConnection(state.connections[0]?.id);
+    }
+    renderConnList(); dlgList.showModal();
+  }
+});
+
+async function openConnEdit(existing) {
+  const dlg = $('#dlgConnEdit'), f = $('form', dlg), result = $('[data-result]', dlg);
+  $('[data-title]', dlg).textContent = existing ? `Edit ${existing.name}` : 'New connection';
+  f.name.value = existing ? existing.name : '';
+  f.env.value = existing ? existing.env : 'test';
+  f.uri.value = '';
+  f.uri.required = !existing;
+  f.uri.placeholder = existing ? `Leave empty to keep: ${existing.uri}` : 'mongodb://admin:password@server:27017/?authSource=admin';
+  result.textContent = ''; result.className = 'test-result';
+
+  const test = async () => {
+    result.className = 'test-result'; result.textContent = 'Testing…';
+    try {
+      const body = f.uri.value.trim() ? { uri: f.uri.value.trim() } : { id: existing?.id };
+      const r = await api('/connections/test', { method: 'POST', body });
+      result.className = 'test-result ok';
+      result.textContent = `The connection works. Signed in as ${r.connectedAs || '(no authentication)'}, MongoDB ${r.serverVersion}.`;
+      return true;
+    } catch (err) {
+      result.className = 'test-result fail'; result.textContent = err.message; return false;
+    }
+  };
+  $('[data-test]', dlg).onclick = test;
+
+  let saved = null;
+  const ok = await runDialog(dlg, async (form) => {
+    const body = { name: form.name.value, env: form.env.value, uri: form.uri.value.trim() };
+    if (body.uri && !(await test())) throw new Error('The connection does not work. Fix the string or test again.');
+    const r = existing
+      ? await api(`/connections/${enc(existing.id)}`, { method: 'PUT', body })
+      : await api('/connections', { method: 'POST', body });
+    saved = r.connection;
+  });
+  if (!ok) return false;
+  toast(existing ? 'The connection has been saved' : `The connection ${saved.name} has been added`);
+  await loadConnections();
+  if (!existing || existing.id === state.connId) selectConnection(saved.id);
+  else $('#connSelect').value = state.connId;
+  renderConnList();
+  return true;
+}
+
+async function openConnections() {
+  await loadConnections().catch((e) => toast(e.message, true));
+  $('#connSelect').value = state.connId || '';
+  renderConnList();
+  $('#dlgConnections').showModal();
+}
+$('#btnConnections').addEventListener('click', openConnections);
+$$('[data-addconn]').forEach((b) => b.addEventListener('click', () => openConnEdit()));
+
+// ---------- Sign-in ----------
+
+const ROLE_LABELS = { admin: 'Admin', operator: 'Operator', viewer: 'Viewer' };
+
+function showAuth(mode) {
+  $('#authScreen').hidden = false;
+  [['login', '#loginForm'], ['setup', '#setupForm'], ['change', '#forceForm']].forEach(([m, sel]) => { $(sel).hidden = m !== mode; });
+  $$('#authScreen [data-err]').forEach((e) => { e.textContent = ''; });
+  $$('dialog[open]').forEach((d) => d.close());
+  const first = $(mode === 'login' ? '#liUser' : mode === 'setup' ? '#suCode' : '#fcCur');
+  setTimeout(() => first && first.focus(), 0);
+}
+
+function applyUser(me) {
+  state.auth = me;
+  const u = me.user;
+  document.body.classList.remove('role-admin', 'role-operator', 'role-viewer');
+  document.body.classList.add(`role-${u.role}`);
+  const btn = $('#btnUser');
+  btn.hidden = !me.authEnabled;
+  btn.innerHTML = `${esc(u.username)} <span class="role-tag">${esc(ROLE_LABELS[u.role] || u.role)}</span>`;
+}
+
+async function boot() {
+  let me;
+  try { me = await api('/auth/me', { quiet: true }); }
+  catch (e) { $('#conn').textContent = e.message; return; }
+  if (me.needsSetup) return showAuth('setup');
+  if (!me.user) return showAuth('login');
+  if (me.user.mustChangePassword) { applyUser(me); return showAuth('change'); }
+  $('#authScreen').hidden = true;
+  applyUser(me);
+  try { await loadConnections(); }
+  catch (e) { $('#conn').textContent = e.message; return; }
+  selectConnection(lsGet('connection'));
+}
+
+function authSubmit(form, fn) {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('[data-err]', form), btn = $('button[type=submit]', form);
+    err.textContent = ''; btn.disabled = true;
+    try { await fn(form); await boot(); }
+    catch (ex) { err.textContent = ex.message; }
+    finally { btn.disabled = false; }
+  });
+}
+
+authSubmit($('#loginForm'), async (f) => {
+  await api('/auth/login', { method: 'POST', body: { username: f.username.value, password: f.password.value }, quiet: true });
+  f.password.value = '';
+});
+authSubmit($('#setupForm'), async (f) => {
+  if (f.password.value !== f.password2.value) throw new Error('The passwords do not match.');
+  await api('/auth/setup', { method: 'POST', body: { code: f.code.value, username: f.username.value, password: f.password.value }, quiet: true });
+  toast('Welcome! Your admin account is created.');
+});
+authSubmit($('#forceForm'), async (f) => {
+  if (f.password.value !== f.password2.value) throw new Error('The passwords do not match.');
+  await api('/auth/password', { method: 'POST', body: { current: f.current.value, password: f.password.value }, quiet: true });
+  f.reset();
+  toast('Your password has been changed.');
+});
+
+async function logout() {
+  try { await api('/auth/logout', { method: 'POST', quiet: true }); } catch {}
+  location.reload();
+}
+$$('[data-logout]').forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); logout(); }));
+
+$('#btnUser').addEventListener('click', async () => {
+  const dlg = $('#dlgAccount'), f = $('form', dlg), u = state.auth.user;
+  $('[data-desc]', dlg).textContent = `Signed in as ${u.username} (${ROLE_LABELS[u.role] || u.role}).`;
+  f.current.value = ''; f.password.value = ''; f.password2.value = '';
+  await runDialog(dlg, async (form) => {
+    if (!form.current.value || !form.password.value) throw new Error('Fill in your current and new password.');
+    if (form.password.value !== form.password2.value) throw new Error('The passwords do not match.');
+    await api('/auth/password', { method: 'POST', body: { current: form.current.value, password: form.password.value } });
+    toast('Your password has been changed. Other sessions for your account were signed out.');
+  });
+});
+
+// ---------- App accounts (admin) ----------
+
+async function renderAppUsers() {
+  const { users } = await api('/app-users');
+  const me = state.auth.user.username.toLowerCase();
+  $('#appUsersBody').innerHTML = users.map((u) => `<tr data-u="${esc(u.username)}">
+    <td class="name">${esc(u.username)}${u.username.toLowerCase() === me ? ' <span class="chip noclose admin">you</span>' : ''}${u.mustChangePassword ? '<div class="sub">temporary password</div>' : ''}</td>
+    <td><select data-role>${['viewer', 'operator', 'admin'].map((r) => `<option value="${r}"${r === u.role ? ' selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}</select></td>
+    <td class="sub">${u.lastLoginAt ? esc(fmtWhen(u.lastLoginAt)) : 'never'}</td>
+    <td class="actions"><button type="button" class="btn small" data-reset>Reset password</button>
+      ${u.username.toLowerCase() === me ? '' : '<button type="button" class="btn small danger" data-remove>Delete</button>'}</td>
+  </tr>`).join('');
+}
+const fmtWhen = (ts) => { const d = new Date(ts); return isNaN(d) ? String(ts) : d.toLocaleString('sv-SE'); };
+
+function showTempPassword(username, pw) {
+  $('#dlgAppUsers [data-temp]').innerHTML = `<div class="temp-pw"><span>Temporary password for <b>${esc(username)}</b>:</span>
+    <code>${esc(pw)}</code><button type="button" class="btn small" data-copytemp>Copy</button></div>
+    <p class="sub" style="margin-top:-4px">Shown only now. Send it securely; it must be changed at the first sign-in.</p>`;
+  $('#dlgAppUsers [data-copytemp]').onclick = async () => {
+    try { await navigator.clipboard.writeText(pw); toast('Password copied'); } catch { toast('Could not copy', true); }
+  };
+}
+
+$('#btnAppUsers').addEventListener('click', async () => {
+  $('#dlgAccount').close();
+  const dlg = $('#dlgAppUsers');
+  $('[data-temp]', dlg).innerHTML = '';
+  $('[name=newUser]', dlg).value = '';
+  try { await renderAppUsers(); } catch (e) { return toast(e.message, true); }
+  dlg.showModal();
+});
+
+$('#dlgAppUsers').addEventListener('click', async (e) => {
+  const dlg = $('#dlgAppUsers');
+  if (e.target.hasAttribute('data-add')) {
+    const username = $('[name=newUser]', dlg).value.trim(), role = $('[name=newRole]', dlg).value;
+    if (!username) return toast('Enter a username.', true);
+    try {
+      const r = await api('/app-users', { method: 'POST', body: { username, role } });
+      $('[name=newUser]', dlg).value = '';
+      showTempPassword(username, r.temporaryPassword);
+      await renderAppUsers();
+    } catch (err) { toast(err.message, true); }
+    return;
+  }
+  const tr = e.target.closest('tr[data-u]'); if (!tr) return;
+  const username = tr.dataset.u;
+  if (e.target.hasAttribute('data-reset')) {
+    dlg.close();
+    const ok = await askConfirm({ title: 'Reset password?', text: `Give ${username} a new temporary password? Their current password stops working and they are signed out.`, okText: 'Reset password' });
+    dlg.showModal();
+    if (!ok) return;
+    try { const r = await api(`/app-users/${enc(username)}`, { method: 'PUT', body: { resetPassword: true } }); showTempPassword(username, r.temporaryPassword); await renderAppUsers(); }
+    catch (err) { toast(err.message, true); }
+  } else if (e.target.hasAttribute('data-remove')) {
+    dlg.close();
+    const ok = await askConfirm({ title: 'Delete app account?', text: `Are you sure you want to delete the app account ${username}? They can no longer sign in to this app. Their MongoDB accounts are not affected.`, okText: 'Delete account' });
+    dlg.showModal();
+    if (!ok) return;
+    try { await api(`/app-users/${enc(username)}`, { method: 'DELETE' }); toast(`${username} has been deleted`); await renderAppUsers(); }
+    catch (err) { toast(err.message, true); }
+  }
+});
+$('#dlgAppUsers').addEventListener('change', async (e) => {
+  if (!e.target.matches('[data-role]')) return;
+  const username = e.target.closest('tr[data-u]').dataset.u;
+  try { await api(`/app-users/${enc(username)}`, { method: 'PUT', body: { role: e.target.value } }); toast(`${username} is now ${ROLE_LABELS[e.target.value]}`); }
+  catch (err) { toast(err.message, true); }
+  renderAppUsers().catch(() => {});
+});
+
+boot();
+</script>
+</body>
+</html>

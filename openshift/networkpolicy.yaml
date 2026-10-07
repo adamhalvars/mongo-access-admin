@@ -1,0 +1,19 @@
+# Only the OpenShift router may reach the app. Outgoing connections (to MongoDB) are not restricted.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mongo-access-admin-allow-from-router
+spec:
+  podSelector:
+    matchLabels:
+      app: mongo-access-admin
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - port: 8080
+          protocol: TCP

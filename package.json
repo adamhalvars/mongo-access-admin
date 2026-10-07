@@ -1,0 +1,36 @@
+{
+  "name": "mongo-access-admin",
+  "version": "1.0.0",
+  "description": "Web UI for managing MongoDB users, roles and database access, with an access matrix, Excel reports and an audit log",
+  "license": "MIT",
+  "author": "Adam Halvars",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git"
+  },
+  "keywords": [
+    "mongodb",
+    "access-control",
+    "rbac",
+    "user-management",
+    "admin",
+    "audit-log"
+  ],
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.4",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "mongodb": "^7.7.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

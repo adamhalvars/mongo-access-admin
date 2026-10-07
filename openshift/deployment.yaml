@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-access-admin
+  annotations:
+    # Roll out automatically when a new image is built into the ImageStream.
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"mongo-access-admin:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"app\")].image"}]
+spec:
+  # One replica: sessions live in memory and data is stored on a ReadWriteOnce volume.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mongo-access-admin
+  template:
+    metadata:
+      labels:
+        app: mongo-access-admin
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: mongo-access-admin:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+            - name: DATA_DIR
+              value: /data
+            - name: AUTH
+              value: "on"
+            - name: TLS
+              value: "off"          # HTTPS is terminated by the route
+            - name: TRUST_PROXY
+              value: "1"            # use the client address from the OpenShift router
+            - name: COOKIE_SECURE
+              value: "true"
+            - name: SESSION_IDLE_MINUTES
+              value: "60"
+            # Optional: create the first admin from a Secret instead of the setup code (see README).
+            - name: INITIAL_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-access-admin-initial-admin
+                  key: username
+                  optional: true
+            - name: INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-access-admin-initial-admin
+                  key: password
+                  optional: true
+            # Behind a proxy that replaces certificates when connecting to MongoDB:
+            # - name: NODE_OPTIONS
+            #   value: --use-system-ca
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mongo-access-admin-data
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,35 @@
+# MongoDB Access Admin for OpenShift (Red Hat UBI 9, runs with any UID).
+# Built by openshift/buildconfig.yaml, or locally: podman build -f openshift/Containerfile .
+
+# ---- Build: install production dependencies ----
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS build
+# Point npm at an internal mirror if the cluster cannot reach registry.npmjs.org.
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+WORKDIR /opt/app-root/src
+COPY --chown=1001:0 package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund --loglevel=error --registry="$NPM_REGISTRY"
+
+# ---- Runtime: minimal image ----
+FROM registry.access.redhat.com/ubi9/nodejs-22-minimal
+WORKDIR /opt/app-root/src
+COPY --from=build --chown=1001:0 /opt/app-root/src/node_modules ./node_modules
+COPY --chown=1001:0 package.json server.js matrix.js report.js auth.js tls.js manage.js healthcheck.js ./
+COPY --chown=1001:0 public ./public
+
+# OpenShift runs the container with a random UID in group 0, so /data is group-writable.
+USER 0
+RUN mkdir -p /data && chgrp -R 0 /data && chmod -R g=u /data
+USER 1001
+
+# HTTPS is provided by the OpenShift route, so the app speaks plain HTTP inside the cluster.
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=8080 \
+    DATA_DIR=/data \
+    AUTH=on \
+    TLS=off \
+    TRUST_PROXY=1 \
+    COOKIE_SECURE=true
+
+EXPOSE 8080
+CMD ["node", "server.js"]

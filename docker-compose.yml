@@ -1,0 +1,28 @@
+# MongoDB Access Admin
+#
+#   docker compose up -d --build          start (build the image first time)
+#   docker compose logs                   shows the setup code and the certificate fingerprint
+#   docker compose exec app node manage.js list-users
+#   docker compose exec app node manage.js reset-password <username>
+services:
+  app:
+    build: .
+    image: mongo-access-admin:latest
+    container_name: mongo-access-admin
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    environment:
+      # Host names / IP addresses people use to reach the server, for the self-signed certificate.
+      TLS_HOSTNAMES: ""
+      # Your own certificate instead: set TLS to "files", mount the files and point to them.
+      # TLS: files
+      # TLS_CERT_FILE: /certs/cert.pem
+      # TLS_KEY_FILE: /certs/key.pem
+      # SESSION_IDLE_MINUTES: "60"
+    volumes:
+      - data:/data
+      # - ./certs:/certs:ro
+
+volumes:
+  data:
