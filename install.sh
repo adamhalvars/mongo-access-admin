@@ -6,7 +6,9 @@
 # Options (after "bash -s --" when piped from curl):
 #   --dir DIR    Where to put the app (default ~/mongo-access-admin)
 #   --no-start   Install only, do not start the app
-#   --server     Install as a systemd service on Debian/Ubuntu instead (runs deploy/install.sh with sudo).
+#   --network    Make it reachable from other computers: HTTPS on port 8443 with sign-in.
+#                Saved in .env, so "npm start" keeps using it.
+#   --server    Install as a systemd service on Debian/Ubuntu instead (runs deploy/install.sh with sudo).
 #                Any options after --server are passed on, e.g. --server --hostnames "10.0.0.5"
 #
 # Run it again to update. connections.json, audit-log.jsonl and .env are kept.
@@ -15,6 +17,7 @@ set -euo pipefail
 REPO_URL=https://github.com/adamhalvars/mongo-access-admin.git
 INSTALL_DIR="${INSTALL_DIR:-$HOME/mongo-access-admin}"
 START=1
+NETWORK=0
 SERVER=0
 SERVER_ARGS=()
 NODE_MAJOR=22
@@ -23,8 +26,9 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dir) INSTALL_DIR="$2"; shift 2 ;;
     --no-start) START=0; shift ;;
+    --network) NETWORK=1; shift ;;
     --server) SERVER=1; shift; SERVER_ARGS=("$@"); break ;;
-    -h|--help) sed -n '2,13p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,15p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
@@ -107,10 +111,41 @@ fi
 log "Installing dependencies"
 (cd "$INSTALL_DIR" && npm ci --no-audit --no-fund --no-update-notifier --loglevel=error)
 
+ENV_FILE="$INSTALL_DIR/.env"
+if [ "$NETWORK" -eq 1 ]; then
+  if [ -f "$ENV_FILE" ] && grep -q '^HOST=' "$ENV_FILE"; then
+    log "Keeping the existing HOST setting in $ENV_FILE"
+  else
+    # The app puts this computer's own IP addresses in the certificate by itself.
+    log "Turning on network access (saved in $ENV_FILE)"
+    {
+      echo "# Network access: HTTPS on port 8443 with sign-in. Remove this line to go back to 127.0.0.1:3000."
+      echo "HOST=0.0.0.0"
+    } >> "$ENV_FILE"
+  fi
+fi
+
+local_ips() { # IPv4 addresses on the network, one per line
+  if command -v ip >/dev/null; then
+    ip -4 -o addr show scope global | awk '$2 !~ /^(docker|br-|veth|virbr)/ {print $4}' | cut -d/ -f1
+  else
+    ipconfig getifaddr en0 2>/dev/null || true
+  fi
+}
+
 echo
 log "Done. MongoDB Access Admin is in $INSTALL_DIR"
 echo "    Start it later with:  cd $INSTALL_DIR && npm start"
-echo "    Then open:            http://127.0.0.1:3000"
+if [ -f "$ENV_FILE" ] && grep -q '^HOST=0.0.0.0' "$ENV_FILE"; then
+  for ip in $(local_ips); do
+    echo "    Then open:            https://$ip:8443"
+  done
+  echo "    The certificate is self-signed, so the browser warns the first time."
+  echo "    First time: create the admin account with the setup code printed when the app starts."
+  echo "    If it cannot be reached, open the port in the firewall (e.g. sudo ufw allow 8443/tcp)."
+else
+  echo "    Then open:            http://127.0.0.1:3000"
+fi
 echo "    Update:               run this installer again"
 
 if [ "$START" -eq 1 ]; then

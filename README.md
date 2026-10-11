@@ -40,7 +40,17 @@ You need **Node.js 20.19+** (or Docker) and a **self-hosted MongoDB 4.4+** accou
 curl -fsSL https://raw.githubusercontent.com/adamhalvars/mongo-access-admin/main/install.sh | bash
 ```
 
-Installs Git and Node.js if they are missing (pacman, apt, dnf, zypper or Homebrew), downloads the app to `~/mongo-access-admin`, and starts it on <http://127.0.0.1:3000>. Run it again to update. Options: `| bash -s -- --dir ~/apps/mongo-admin`, `--no-start`, or `--server` to install it as a systemd service on Debian/Ubuntu (same as `deploy/install.sh`).
+Installs Git and Node.js if they are missing (pacman, apt, dnf, zypper or Homebrew), downloads the app to `~/mongo-access-admin`, and starts it on <http://127.0.0.1:3000>. Run it again to update. It only listens on 127.0.0.1, so it can only be opened on that computer.
+
+To open it from other computers on your network, add `--network`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adamhalvars/mongo-access-admin/main/install.sh | bash -s -- --network
+```
+
+It then runs on **https://&lt;the computer's IP&gt;:8443** with a self-signed certificate and sign-in. The first time, create the admin account with the setup code printed in the terminal. The setting is saved in `.env`, so `npm start` keeps using it. If it cannot be reached, open the port in the firewall (for example `sudo ufw allow 8443/tcp`). On an existing install you can do the same by hand: `HOST=0.0.0.0 npm start`.
+
+Other options: `--dir ~/apps/mongo-admin`, `--no-start`, or `--server` to install it as a systemd service on Debian/Ubuntu that starts at boot (same as `deploy/install.sh`).
 
 ### On your own computer
 
