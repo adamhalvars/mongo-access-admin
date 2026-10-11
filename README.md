@@ -2,7 +2,7 @@
 
 **A web UI for managing MongoDB users, roles and database access across prod, test and dev – with an access matrix, Excel reports and an audit log.**
 
-[![CI](https://github.com/YOUR-GITHUB-USER/mongo-access-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR-GITHUB-USER/mongo-access-admin/actions/workflows/ci.yml)
+[![CI](https://github.com/adamhalvars/mongo-access-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/adamhalvars/mongo-access-admin/actions/workflows/ci.yml)
 ![Node.js 20.19+](https://img.shields.io/badge/node-%3E%3D20.19-339933?logo=node.js&logoColor=white)
 ![MongoDB 4.4–9.0](https://img.shields.io/badge/MongoDB-4.4%E2%80%939.0-47A248?logo=mongodb&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -34,10 +34,18 @@ Run it on your own computer, on a Linux server for the whole team (systemd or Do
 
 You need **Node.js 20.19+** (or Docker) and a **self-hosted MongoDB 4.4+** account with `userAdminAnyDatabase` or `root`. MongoDB Atlas is not supported, because Atlas does not allow user and role commands over the database connection.
 
+### One-line install (Linux/macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adamhalvars/mongo-access-admin/main/install.sh | bash
+```
+
+Installs Git and Node.js if they are missing (pacman, apt, dnf, zypper or Homebrew), downloads the app to `~/mongo-access-admin`, and starts it on <http://127.0.0.1:3000>. Run it again to update. Options: `| bash -s -- --dir ~/apps/mongo-admin`, `--no-start`, or `--server` to install it as a systemd service on Debian/Ubuntu (same as `deploy/install.sh`).
+
 ### On your own computer
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git
+git clone https://github.com/adamhalvars/mongo-access-admin.git
 cd mongo-access-admin
 npm install
 npm start
@@ -48,7 +56,7 @@ Open <http://127.0.0.1:3000>, click **Connections** and add your first server: n
 ### On a Linux server (Debian/Ubuntu)
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git
+git clone https://github.com/adamhalvars/mongo-access-admin.git
 cd mongo-access-admin
 sudo ./deploy/install.sh --hostnames "mongoadmin.example.com,10.0.0.50"
 ```
@@ -58,7 +66,7 @@ Open `https://<server>:8443` and create the first admin with the setup code the 
 ### With Docker
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git
+git clone https://github.com/adamhalvars/mongo-access-admin.git
 cd mongo-access-admin
 docker compose up -d --build
 docker compose logs        # shows the setup code
@@ -94,7 +102,7 @@ Details: [Running on OpenShift](#running-on-openshift).
 ## Getting started on your own computer
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git
+git clone https://github.com/adamhalvars/mongo-access-admin.git
 cd mongo-access-admin
 npm install
 npm start
@@ -127,7 +135,7 @@ On a server the app listens on the network, so it always requires **sign-in** an
 ### Option 1: systemd service (Debian/Ubuntu)
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git
+git clone https://github.com/adamhalvars/mongo-access-admin.git
 cd mongo-access-admin
 sudo ./deploy/install.sh --hostnames "mongoadmin.example.com,10.0.0.50"
 ```
@@ -158,7 +166,7 @@ If the firewall is on: `sudo ufw allow 8443/tcp`.
 ### Option 2: Docker
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git
+git clone https://github.com/adamhalvars/mongo-access-admin.git
 cd mongo-access-admin
 # Optional: put your server's names/IPs in TLS_HOSTNAMES in docker-compose.yml
 docker compose up -d --build

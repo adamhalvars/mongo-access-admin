@@ -6,7 +6,7 @@
   "author": "Adam Halvars",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR-GITHUB-USER/mongo-access-admin.git"
+    "url": "git+https://github.com/adamhalvars/mongo-access-admin.git"
   },
   "keywords": [
     "mongodb",
